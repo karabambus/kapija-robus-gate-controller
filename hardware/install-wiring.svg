@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="790" viewBox="0 0 1040 790" font-family="sans-serif">
+  <defs>
+    <style>
+      .box{fill:#f8fafc;stroke:#334155;stroke-width:2}
+      .blk{fill:#e2e8f0;stroke:#334155;stroke-width:1.5}
+      .title{font-size:15px;font-weight:bold;fill:#0f172a}
+      .pin{font-size:12px;fill:#0f172a}
+      .pins{font-size:11px;font-weight:bold;fill:#0f172a}
+      .note{font-size:11px;fill:#64748b}
+      .warn{font-size:12px;fill:#b91c1c;font-weight:bold}
+      .w{fill:none;stroke-width:3;stroke-linejoin:round}
+      .dot{fill:#0f172a}
+      .screw{fill:#cbd5e1;stroke:#334155;stroke-width:1.5}
+    </style>
+  </defs>
+
+  <rect width="1040" height="790" fill="#ffffff"/>
+  <text x="20" y="26" class="title" font-size="18">INSTALL WIRING — inside the Nice Robus 350 housing</text>
+  <text x="20" y="46" class="warn">BREAKER OFF before touching any terminal. Mains (230 V) enters at the bottom of the housing — never go there.</text>
+  <text x="20" y="64" class="note">Legend: ● = connection (junction). Lines crossing WITHOUT ● are NOT connected. Terminal row drawn left→right exactly as on the real board.</text>
+
+  <!-- ===== Robus terminal strip, horizontal, as on the board ===== -->
+  <rect x="40" y="82" width="580" height="118" class="box" rx="8"/>
+  <text x="55" y="102" class="title">ROBUS 350 — terminal row</text>
+
+  <rect x="55"  y="118" width="90" height="66" class="blk" rx="4"/>
+  <rect x="159" y="118" width="90" height="66" class="blk" rx="4"/>
+  <rect x="263" y="118" width="90" height="66" class="blk" rx="4"/>
+  <rect x="367" y="118" width="90" height="66" class="blk" rx="4"/>
+  <rect x="471" y="118" width="90" height="66" class="blk" rx="4"/>
+  <text x="72"  y="133" class="pins">FLASH</text>
+  <text x="180" y="133" class="pins">S.C.A.</text>
+  <text x="270" y="133" class="pins">BLUEBUS</text>
+  <text x="385" y="133" class="pins">STOP</text>
+  <text x="493" y="133" class="pins">P.P.</text>
+
+  <circle cx="80"  cy="160" r="7" class="screw"/><circle cx="120" cy="160" r="7" class="screw"/>
+  <circle cx="184" cy="160" r="7" class="screw"/><circle cx="224" cy="160" r="7" class="screw"/>
+  <circle cx="288" cy="160" r="7" class="screw"/><circle cx="328" cy="160" r="7" class="screw"/>
+  <circle cx="392" cy="160" r="7" class="screw"/><circle cx="432" cy="160" r="7" class="screw"/>
+  <circle cx="496" cy="160" r="7" class="screw"/><circle cx="536" cy="160" r="7" class="screw"/>
+
+  <text x="164" y="215" class="pins" fill="#0891b2">−</text>
+  <text x="230" y="215" class="pins" fill="#0891b2">+</text>
+  <text x="440" y="215" class="pins" fill="#0f172a">−</text>
+  <text x="504" y="212" class="pins" fill="#dc2626">+</text>
+  <text x="544" y="215" class="pins" fill="#9333ea">PP</text>
+
+  <text x="630" y="120" class="note">FLASH = lamp, BLUEBUS = photocells:</text>
+  <text x="630" y="134" class="note">existing wires, DO NOT TOUCH.</text>
+  <text x="630" y="152" class="note">STOP left screw: stays empty/as-is.</text>
+  <text x="630" y="176" class="pin"><tspan font-weight="bold">Adjacent pair STOP“−” + P.P.“+”</tspan></text>
+  <text x="630" y="190" class="pin">= 24 V accessory tap (33 V measured).</text>
+
+  <!-- ===== Wires from the strip ===== -->
+  <!-- N1 +33V: P.P.+ screw -> fuse -> buck IN+ ; NOTE P.P.+ screw holds TWO wires (tap + relay NO) -->
+  <polyline class="w" stroke="#dc2626" points="496,167 496,240"/>
+  <rect x="481" y="240" width="30" height="50" fill="#fde68a" stroke="#a16207" stroke-width="2"/>
+  <text x="518" y="262" class="pin">fuse 200 mA</text>
+  <polyline class="w" stroke="#dc2626" points="496,290 496,312 330,312 330,362 380,362"/>
+  <!-- N2 −: STOP right screw -> buck IN− -->
+  <polyline class="w" stroke="#0f172a" points="432,167 432,218 310,218 310,412 380,412"/>
+
+  <!-- ===== Buck ===== -->
+  <rect x="380" y="332" width="240" height="140" class="box" rx="10"/>
+  <text x="400" y="356" class="title">Buck ≥40V-in (LM2596S)</text>
+  <circle cx="380" cy="362" r="4" class="dot"/><text x="392" y="376" class="pin">IN+</text>
+  <circle cx="380" cy="412" r="4" class="dot"/><text x="392" y="416" class="pin">IN−</text>
+  <circle cx="620" cy="362" r="4" class="dot"/><text x="572" y="366" class="pin">OUT+</text>
+  <circle cx="620" cy="412" r="4" class="dot"/><text x="572" y="416" class="pin">OUT−</text>
+  <text x="400" y="458" class="warn">Set output to 5.0 V BEFORE connecting!</text>
+
+  <!-- ===== ESP32 ===== -->
+  <rect x="780" y="332" width="230" height="230" class="box" rx="10"/>
+  <text x="800" y="356" class="title">Joy-it ESP32</text>
+  <circle cx="780" cy="362" r="4" class="dot"/><text x="792" y="376" class="pin">VIN (5V)</text>
+  <circle cx="780" cy="412" r="4" class="dot"/><text x="792" y="416" class="pin">GND</text>
+  <circle cx="780" cy="472" r="4" class="dot"/><text x="792" y="476" class="pin">GPIO 26 (D26)</text>
+  <circle cx="780" cy="522" r="4" class="dot"/><text x="792" y="526" class="pin">GPIO 27 (D27)</text>
+
+  <!-- N3 +5V: OUT+ -> VIN, branch -> relay + -->
+  <polyline class="w" stroke="#ea580c" points="620,362 780,362"/>
+  <circle cx="700" cy="362" r="5" class="dot"/>
+  <polyline class="w" stroke="#ea580c" points="700,362 700,572 320,572"/>
+  <!-- N4 GND: OUT− -> GND, branches -> relay −, PC817 E -->
+  <polyline class="w" stroke="#475569" points="620,412 780,412"/>
+  <circle cx="740" cy="412" r="5" class="dot"/>
+  <polyline class="w" stroke="#475569" points="740,412 740,612 320,612"/>
+  <circle cx="760" cy="412" r="5" class="dot"/>
+  <polyline class="w" stroke="#475569" points="760,412 760,722 690,722"/>
+  <!-- N5 D26 -> relay S -->
+  <polyline class="w" stroke="#2563eb" points="780,472 685,472 685,652 320,652"/>
+
+  <!-- ===== Relay (contacts on top edge, control pins on right edge) ===== -->
+  <rect x="80" y="540" width="240" height="150" class="box" rx="10"/>
+  <text x="100" y="676" class="title">COM-RM01 relay</text>
+  <circle cx="140" cy="540" r="6" class="screw"/><text x="120" y="560" class="pin">COM</text>
+  <circle cx="200" cy="540" r="6" class="screw"/><text x="190" y="560" class="pin">NO</text>
+  <text x="248" y="560" class="pin">NC: unused</text>
+  <circle cx="320" cy="572" r="4" class="dot"/><text x="278" y="576" class="pin">+</text>
+  <circle cx="320" cy="612" r="4" class="dot"/><text x="278" y="616" class="pin">−</text>
+  <circle cx="320" cy="652" r="4" class="dot"/><text x="278" y="656" class="pin">S</text>
+
+  <!-- N6 relay COM -> P.P. LEFT screw ("+" screw is the right one? no: COM goes to P.P. right screw) -->
+  <!-- P.P. screws: left=496 (+, tap), right=536 (step input). Relay: COM->536, NO->496 (shares screw with tap wire) -->
+  <polyline class="w" stroke="#9333ea" points="140,540 140,230 536,230 536,167"/>
+  <polyline class="w" stroke="#9333ea" points="200,540 200,246 468,246 468,192 490,174"/>
+  <circle cx="496" cy="167" r="5" class="dot"/>
+  <text x="104" y="226" class="note">COM</text>
+  <text x="90" y="300" class="note">NO lands in the SAME screw as the tap wire</text>
+  <text x="90" y="314" class="note">(P.P. “+”): two wires, one screw — ferrule.</text>
+
+  <!-- ===== PC817 ===== -->
+  <rect x="450" y="640" width="240" height="130" class="box" rx="10"/>
+  <circle cx="466" cy="660" r="6" fill="#0f172a"/>
+  <text x="480" y="665" class="title">PC817</text>
+  <circle cx="450" cy="682" r="4" class="dot"/><text x="462" y="686" class="pin">1 A</text>
+  <circle cx="450" cy="722" r="4" class="dot"/><text x="462" y="726" class="pin">2 K</text>
+  <circle cx="690" cy="682" r="4" class="dot"/><text x="646" y="686" class="pin">C 4</text>
+  <circle cx="690" cy="722" r="4" class="dot"/><text x="646" y="726" class="pin">E 3</text>
+  <text x="480" y="756" class="note">● top-left = pin 1 (real orientation)</text>
+
+  <!-- N8 SCA "+" (right screw) -> 10k -> A  [as-built: wire flag "SCA-a"] -->
+  <polyline class="w" stroke="#0891b2" points="224,167 224,205 60,205 60,730 240,730"/>
+  <rect x="240" y="716" width="60" height="28" fill="#fde68a" stroke="#a16207" stroke-width="2"/>
+  <text x="243" y="712" class="pin">10 kΩ</text>
+  <polyline class="w" stroke="#0891b2" points="300,730 430,730 430,682 450,682"/>
+  <!-- N9 SCA "−" (left screw) -> K  [as-built: wire flag "SCA-b"] -->
+  <polyline class="w" stroke="#0891b2" points="184,167 184,192 75,192 75,752 420,752 420,722 450,722"/>
+  <!-- N10 D27 -> C -->
+  <polyline class="w" stroke="#16a34a" points="780,522 720,522 720,682 690,682"/>
+
+  <!-- Notes -->
+  <text x="790" y="590" class="note">S.C.A. polarity AS BUILT (verified at</text>
+  <text x="790" y="604" class="note">install, 2026-08-04): right screw = “+”</text>
+  <text x="790" y="618" class="note">→ 10 kΩ → anode; left screw = “−” → K.</text>
+  <text x="790" y="642" class="note">Robus setting after power-up:</text>
+  <text x="790" y="656" class="note">Level-2 L4 = “on if leaf is open”</text>
+  <text x="790" y="670" class="note">(manual §7.2.3, Table 14).</text>
+</svg>

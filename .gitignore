@@ -1,0 +1,15 @@
+# Secrets — real config never enters the repo (use include/config.example.h)
+firmware/include/config.h
+
+# Local working notes: development plan, inspection checklists, site photos,
+# vendor manuals. Not part of the published project.
+docs/
+images/
+
+# PlatformIO build artifacts
+firmware/.pio/
+firmware/.vscode/
+
+# OS noise
+.DS_Store
+Thumbs.db
