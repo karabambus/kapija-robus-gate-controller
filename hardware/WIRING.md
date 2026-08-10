@@ -5,7 +5,7 @@ Two stages: **bench** (desk, USB power, safe to experiment) and **install**
 of that stage is complete and double-checked.
 
 Diagrams: [`bench-wiring.svg`](bench-wiring.svg) ·
-[`install-wiring.svg`](install-wiring.svg)
+[`install-wiring.svg`](install-wiring.svg) · full shopping list: [`BOM.md`](BOM.md)
 
 ## Parts
 

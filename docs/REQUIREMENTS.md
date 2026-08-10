@@ -1,0 +1,67 @@
+# Requirements — v1 (rev 3: Plan B confirmed, no auto-close)
+
+Rev 2, 2026-07-30: opener identified as **Nice Robus** (sliding gate, BlueBUS platform).
+Manual research (see `NICE-ROBUS-NOTES.md`) resolved risks R1–R3 and R5 of rev 1 and
+**changed the trigger method from RF replay to a wired step-by-step contact.**
+Rev 3, 2026-07-30: owner reviewed both plans and confirmed **Plan B** (ESP32 wired at
+the gate; the "sacrificial remote at home" Plan A was considered and rejected).
+**Auto-close is out of v1** — the gate is closed by a second press (app or remote),
+same as today. Board function L1 stays OFF; enabling it later is a v2 option.
+
+## Context
+
+- Opener: **Nice Robus** family (exact model from label at inspection — RB350/400/600/1000
+  all share the same control platform).
+- Radio is **rolling code** (SMXI/FLOR or SMXIS/Smilo, 433.92 MHz) → RF replay impossible.
+- Board offers: **P.P.** step-by-step dry-contact input, **S.C.A.** open-gate-indicator
+  24V output, **24Vdc/100mA accessory tap**, built-in auto-close (function L1).
+- New tenant moving in; multiple tenants over time. WiFi confirmed near gate.
+
+## Functional requirements (v1)
+
+| # | Requirement |
+|---|-------------|
+| F1 | Tenant can trigger the gate from a phone browser on the home WiFi (local web page served by ESP32). |
+| F2 | Web page protected by a **shared password** (v1). |
+| F3 | Existing RF remotes keep working, completely unaffected. |
+| F4 | Every web trigger **logged** (timestamp), viewable on a log page, survives reboot. |
+| F5 | **No auto-close in v1.** The gate is closed by a second press (app or remote), exactly as today. The app button acts as a toggle, labeled from gate state (F7): "Open" when closed, "Close" when open. |
+| F6 | ESP32 triggers the gate by **pulsing a relay/optocoupler across the P.P. terminal** (~0.5 s contact closure). |
+| F7 | **Gate state in the app**: ESP32 reads the S.C.A. output (board L4 = "on if leaf is open") and shows open/closed. |
+| F8 | ESP32 **powered from the board's 24Vdc accessory tap** via a 24V→5V buck converter (stay well under the 100 mA @ 24V budget). |
+
+## Nice board configuration (one-time, at install)
+
+- Level-2 L4 (S.C.A. function) = "on if the leaf is open" — the only board setting v1 needs.
+- Leave L1 "Automatic Closing" OFF (owner's decision; v2 option).
+- Optional consideration for v2: Level-2 L2 step-by-step mode = "Condominium"
+  (commands during opening are ignored — tenants can't accidentally reverse the gate
+  mid-open; a command during closing still reopens).
+
+## Non-goals for v1 (v2 backlog)
+
+- Per-tenant PINs and named log (individual revocation) — planned v2.
+- Auto-close (board function L1 + pause time) — five-minute board-key procedure, v2.
+- "Sacrificial remote" architecture (Plan A) — evaluated, rejected in favor of Plan B.
+- Access from outside the home network.
+- Pedestrian-gate command (radio Mode I T2 does partial open — could be a second app button in v2, wired to nothing extra: partial open is only available via radio, so v2 would need an OXI/second channel trick — parked).
+
+## Remaining risks / open questions
+
+| # | Risk / question | Resolution path |
+|---|-----------------|-----------------|
+| R1 | ~~Exact model unknown~~ **RESOLVED 2026-07-30:** label photo = **ROBUS350, serial 07/07** — exactly the manual in `docs/manual/`. Board photos confirm terminal row FLASH·S.C.A.·BLUEBUS·STOP·P.P. as documented; **P.P. and S.C.A. are unwired/free**; FLASH has a lamp, BLUEBUS has photocells; L1–L6 all off (factory defaults, no auto-close active). | — |
+| R2 | Free space + antenna performance for ESP32 inside the Robus housing (plastic, IP44). | Photos show usable space below the control unit; measure at next visit. |
+| R3 | ~~24V tap~~ **RESOLVED 2026-07-30: measured 33V DC** across the inner STOP(−)/P.P.(+) pins, unloaded, tap free. Confirms the ≥40V-input buck requirement (Mini360 would have died). | — |
+| R4 | WiFi signal at the exact opener location. | Phone check — still to do. |
+| R6 | S.C.A. measured 0V — but gate state during measurement unclear (factory function = open-gate indicator: 0V when closed is *correct*), and unloaded open-collector outputs can read 0V on a 10MΩ meter anyway. | Optional retest: 200V DC range, gate fully open. Definitive test at install: set L4 = "on if leaf open", opto as load. Fallback: reed switch. |
+| R5 | Radio receiver model (SMXI vs SMXIS) hidden behind wires in photos — only matters for buying tenant remotes. | Photo of the module on the SM connector ("Rx" area, lower board) at next visit. |
+
+## Acceptance criteria (v1 done when…)
+
+1. Tenant's phone on home WiFi: open page → password → tap **Open** → gate moves;
+   second tap closes it.
+2. Original remotes still work; photocells and STOP behavior unchanged.
+3. App shows correct open/closed state (matches reality after remote-triggered moves too).
+4. Log page lists every web trigger with date/time, surviving reboot.
+5. Runs installed for a week without intervention.

@@ -25,14 +25,21 @@ button with live gate state, and a persistent access log.
 
 ```
 firmware/   PlatformIO project (ESP32, Arduino framework, no external libs)
-hardware/   Wiring diagrams and assembly instructions
+hardware/   Bill of materials, wiring diagrams, assembly instructions
+docs/       Requirements and Nice Robus platform research notes
 ```
 
 ## Getting started
 
-1. Wire the bench setup — see [`hardware/WIRING.md`](hardware/WIRING.md).
-2. Build and flash the firmware — see [`firmware/README.md`](firmware/README.md).
-3. Open `http://kapija.local` on the same WiFi.
+1. Buy the parts — see [`hardware/BOM.md`](hardware/BOM.md).
+2. Wire the bench setup — see [`hardware/WIRING.md`](hardware/WIRING.md).
+3. Build and flash the firmware — see [`firmware/README.md`](firmware/README.md).
+4. Open `http://kapija.local` on the same WiFi.
+
+The finished controller — a "flying" Dupont harness in a small box, no perfboard
+([`hardware/build.jpeg`](hardware/build.jpeg)):
+
+<img src="hardware/build.jpeg" alt="Assembled controller in its box" width="360">
 
 ## Status
 

@@ -1,9 +1,14 @@
 # Secrets — real config never enters the repo (use include/config.example.h)
 firmware/include/config.h
 
-# Local working notes: development plan, inspection checklists, site photos,
-# vendor manuals. Not part of the published project.
-docs/
+# Local-only notes: site-specific checklists, personal shopping lists,
+# site photos, and the vendor manual PDF (copyrighted — see links in
+# docs/NICE-ROBUS-NOTES.md for the official sources).
+docs/manual/
+docs/INSPECTION-CHECKLIST.md
+docs/UGRADNJA-CHECKLIST.md
+docs/SHOPPING-LIST.md
+docs/POPIS-ZA-KUPNJU.md
 images/
 
 # PlatformIO build artifacts
