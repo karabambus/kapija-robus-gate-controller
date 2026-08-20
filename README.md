@@ -83,7 +83,7 @@ One spec is critical: the Robus "24 V" accessory tap actually measures
 
 - Full parts list and buying notes: [hardware/BOM.md](hardware/BOM.md)
 - Wiring, terminal map and install checklist: [hardware/WIRING.md](hardware/WIRING.md)
-- Platform research on the Nice Robus family: [docs/NICE-ROBUS-NOTES.md](docs/NICE-ROBUS-NOTES.md)
+- Nice Robus platform facts this project relies on: [hardware/ROBUS-NOTES.md](hardware/ROBUS-NOTES.md)
 
 ## Build your own
 
@@ -114,9 +114,11 @@ from triggering the gate. OTA flashing has its own separate password.
 
 ```
 firmware/   PlatformIO project (ESP32, Arduino framework, no external libs)
-hardware/   Bill of materials, wiring diagram, assembly notes, build photo
-docs/       Requirements, field-test findings, Nice Robus platform research
+hardware/   Bill of materials, wiring, platform notes, build photo
+docs/       Backlog and app screenshots
 ```
+
+Planned improvements live in [docs/BACKLOG.md](docs/BACKLOG.md).
 
 ## License
 

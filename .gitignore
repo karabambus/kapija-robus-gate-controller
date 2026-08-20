@@ -2,8 +2,10 @@
 firmware/include/config.h
 
 # Local-only notes: site-specific checklists, personal shopping lists,
-# site photos, and the vendor manual PDF (copyrighted — see links in
-# docs/NICE-ROBUS-NOTES.md for the official sources).
+# site photos, internal development notes (docs/dev/), and the vendor
+# manual PDF (copyrighted — see links in docs/dev/NICE-ROBUS-NOTES.md
+# for the official sources).
+docs/dev/
 docs/manual/
 docs/INSPECTION-CHECKLIST.md
 docs/UGRADNJA-CHECKLIST.md
