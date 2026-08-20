@@ -79,6 +79,16 @@ same as today. Board function L1 stays OFF; enabling it later is a v2 option.
   - **Per-IP rate limit on /toggle**: ~6 triggers/min per IP — limits relay
     wear from a runaway LAN script on the passwordless build.
   - **CSV log export** (`/log.csv`) for off-device archiving.
+  - **Browser-push OTA** (prevents the espota pitfalls hit on 2026-08-20): an
+    HTTP `/update` endpoint on the device (ESP32 `Update.h`, guarded by
+    OTA_PASSWORD + the origin check) so a new firmware.bin is uploaded TO the
+    device like any file upload. Removes both espota failure modes: no
+    device→computer return connection (host firewalls irrelevant) and no
+    ini/shell password mangling. espota stays as fallback.
+  - **Client-supplied time for AP mode**: phones know the time — page JS sends
+    `Date.now()` to a small endpoint, ESP32 calls `settimeofday`. Accept only
+    when the clock is unsynced or clearly drifted; first visit after boot sets
+    the clock. (Hardware alternative: DS3231 RTC — v3 site-visit batch.)
   - **v3 hardware (needs site visit)**: reed switch for certain closed-position
     sensing; buzzer chirp on trigger.
 - **Travel-time progress** (added 2026-08-20): measure with a stopwatch how
@@ -101,7 +111,7 @@ same as today. Board function L1 stays OFF; enabling it later is a v2 option.
 | R1 | ~~Exact model unknown~~ **RESOLVED 2026-07-30:** label photo = **ROBUS350, serial 07/07** — exactly the manual in `docs/manual/`. Board photos confirm terminal row FLASH·S.C.A.·BLUEBUS·STOP·P.P. as documented; **P.P. and S.C.A. are unwired/free**; FLASH has a lamp, BLUEBUS has photocells; L1–L6 all off (factory defaults, no auto-close active). | — |
 | R2 | Free space + antenna performance for ESP32 inside the Robus housing (plastic, IP44). | Photos show usable space below the control unit; measure at next visit. |
 | R3 | ~~24V tap~~ **RESOLVED 2026-07-30: measured 33V DC** across the inner STOP(−)/P.P.(+) pins, unloaded, tap free. Confirms the ≥40V-input buck requirement (Mini360 would have died). | — |
-| R4 | WiFi signal at the exact opener location. | Phone check — still to do. |
+| R4 | WiFi signal at the exact opener location. **Measured 2026-08-20** (v1.1 diag line, ESP32 inside the housing): **−89 dBm — marginal.** Works, but could explain any flakiness; consider antenna orientation, moving the router, or a repeater if problems recur. | Watch it on the diag line; improve if drops occur. |
 | R6 | S.C.A. measured 0V — but gate state during measurement unclear (factory function = open-gate indicator: 0V when closed is *correct*), and unloaded open-collector outputs can read 0V on a 10MΩ meter anyway. | Optional retest: 200V DC range, gate fully open. Definitive test at install: set L4 = "on if leaf open", opto as load. Fallback: reed switch. |
 | R5 | Radio receiver model (SMXI vs SMXIS) hidden behind wires in photos — only matters for buying tenant remotes. | Photo of the module on the SM connector ("Rx" area, lower board) at next visit. |
 

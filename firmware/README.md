@@ -48,6 +48,22 @@ no need to open the gate housing:
 Fallback: USB flashing always keeps working — plug a cable into the board
 and comment the `espota` lines back out.
 
+### OTA troubleshooting (learned the hard way)
+
+| Symptom | Cause / fix |
+|---|---|
+| `Authenticating...FAIL` although the password is right | `$` (and other metacharacters) in `OTA_PASSWORD` get mangled twice on the way to espota: PlatformIO's ini interpolation eats single `$`, and the shell then expands `$$` to its PID. Avoid `$`-type characters in OTA passwords, or bypass both layers by calling espota.py directly (below). |
+| `Authenticating...OK` then `No response from device` | Not the device — your computer's firewall. espota makes the ESP32 connect **back** to your machine on a TCP port. Pin the port with `-P 33333` and allow it in, e.g. `sudo ufw allow from 192.168.1.0/24 to any port 33333 proto tcp`. |
+
+Direct espota call (no ini editing, password stays out of tracked files —
+single quotes prevent shell mangling):
+
+```sh
+python3 ~/.platformio/packages/framework-arduinoespressif32/tools/espota.py \
+  -i kapija.local -p 3232 -P 33333 --auth='<OTA_PASSWORD>' \
+  -f .pio/build/esp32dev/firmware.bin -r
+```
+
 **Standalone AP builds** (`WIFI_AP_MODE true`): OTA still works. Join the
 ESP32's own WiFi network (`AP_SSID`) from the flashing computer and set
 `upload_port = 192.168.4.1` in `platformio.ini` — mDNS (`kapija.local`) may
