@@ -28,6 +28,15 @@ unsigned long moveStartMs = 0;
 bool pendingPartial = false;  // stop-press issued, waiting for settle
 bool partialOpen = false;     // settled open, but known to be mid-travel
 
+// External-move detection (RF remote / wall button): S.C.A. blinks during
+// travel, so a burst of raw transitions while we are idle means the gate is
+// moving without us. Three transitions within the window rules out a single
+// electrical blip (which makes at most two).
+constexpr uint8_t kFlipConfirm = 3;
+constexpr unsigned long kFlipWindowMs = 4000;
+uint8_t flipCount = 0;
+unsigned long flipWindowStartMs = 0;
+
 void relayWrite(bool active) {
   digitalWrite(RELAY_PIN, (active == RELAY_ACTIVE_HIGH) ? HIGH : LOW);
 }
@@ -57,6 +66,18 @@ void tick() {
   if (raw != lastRaw) {
     lastRaw = raw;
     lastRawChangeMs = millis();
+    if (millis() - flipWindowStartMs > kFlipWindowMs) {
+      flipWindowStartMs = millis();
+      flipCount = 1;
+    } else if (++flipCount >= kFlipConfirm && move == kIdle) {
+      // Sustained blinking with no web trigger: an RF remote (or wall
+      // button) started a move. Direction follows the settled state; the
+      // burst's first flip approximates when the travel began.
+      move = settledOpen ? kClosing : kOpening;
+      moveStartMs = flipWindowStartMs;
+      movingUntilMs =
+          flipWindowStartMs + (settledOpen ? TRAVEL_CLOSE_MS : TRAVEL_OPEN_MS);
+    }
   } else if (raw != settledOpen &&
              millis() - lastRawChangeMs >= STATE_SETTLE_MS) {
     settledOpen = raw;    // level held long enough: accept the new state
