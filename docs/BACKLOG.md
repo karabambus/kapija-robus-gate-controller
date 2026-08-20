@@ -26,6 +26,9 @@ Planned improvements, in rough priority order. No dates promised.
 
 ## Hardware (needs a site visit)
 
+- Hands-free trigger from the car: recognize a horn pattern (microphone)
+  or headlight flashes (light sensor) at the gate. Needs a distinctive
+  pattern - a single honk or flash must not open the gate for strangers
 - Reed switch for certain closed-position sensing
 - Battery-backed RTC (DS3231) - low priority now that browsers donate time
 - Buzzer chirp on trigger
