@@ -79,8 +79,7 @@ Roughly 15 EUR in parts: an ESP32 devkit, a COM-RM01 relay module, a PC817
 optocoupler, an LM2596-type buck converter and a fuse.
 
 One spec is critical: the Robus "24 V" accessory tap actually measures
-**33 V**, so the buck converter must accept at least 40 V input. A Mini360
-dies instantly and a step-up module cannot work - see the bill of materials.
+**33 V**, so the buck converter must accept at least 40 V input.
 
 - Full parts list and buying notes: [hardware/BOM.md](hardware/BOM.md)
 - Wiring, terminal map and install checklist: [hardware/WIRING.md](hardware/WIRING.md)

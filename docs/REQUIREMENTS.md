@@ -59,11 +59,17 @@ same as today. Board function L1 stays OFF; enabling it later is a v2 option.
   browser (localStorage); stored log entries stay in Croatian and are translated
   at display time.
 - Better UI (visual polish of the web app).
-- **Public README polish** (added 2026-08-20, **higher priority — do after live
-  testing**): make the GitHub landing page presentable — feature list, UI
-  screenshots (Machine Panel design), wiring/architecture picture, build photo
-  front and center, clear "what you need / how to build" flow for strangers
-  finding the repo.
+- ~~Public README polish~~ — **done 2026-08-20** (screenshots, features, build
+  guide, ASCII-only). Follow-ups from owner's post-publish review:
+  - **README screenshots should show the English UI** (current ones are the
+    Croatian default; regenerate with `localStorage lang='en'` in the stub).
+  - **Rework docs/ for a public audience**: REQUIREMENTS.md and
+    NICE-ROBUS-NOTES.md are internal development notes (requirements revs,
+    risk logs, session history) with little value to a stranger building one.
+    Replace with a simple public BACKLOG.md (planned features only) and move
+    or heavily trim the development notes; keep the Robus platform facts that
+    a builder actually needs (terminal map, L4 setting, 33 V warning) close to
+    the hardware docs.
 - Suggestions batch (added 2026-08-20):
   - ~~Boot log entry + firmware version~~ — **done 2026-08-20**: every boot
     appends a "start" log row carrying `FW_VERSION` + reset cause (power-on /
