@@ -8,7 +8,14 @@
 #define WIFI_PASS "CHANGE-ME"
 
 // --- Access ---
+// Set to false to skip the login page entirely and rely on WiFi security alone:
+// anyone who can join the WiFi can then operate the gate and read the log
+// (entries still record the caller's IP). OTA flashing keeps its own password.
+#define REQUIRE_LOGIN true
+
 // Shared tenant password for the web UI (v1; per-tenant PINs planned for v2).
+// Unused when REQUIRE_LOGIN is false (the login routes are not registered),
+// but must stay defined — the auth module references it in every build.
 #define SHARED_PASSWORD "change-me"
 
 // mDNS hostname -> http://kapija.local

@@ -24,8 +24,11 @@ String lineToRow(const String& line) {
   long epoch = line.substring(0, a).toInt();
   String action = line.substring(a + 1, b);
   String ip = line.substring(b + 1);
-  return "<tr><td>" + timeutil::formatEpoch(epoch) + "</td><td>" + action +
-         "</td><td class=muted>" + ip + "</td></tr>";
+  // data-act carries the stored action key so the page can translate it
+  // client-side without rewriting old log entries.
+  return "<tr><td>" + timeutil::formatEpoch(epoch) + "</td><td><span data-act=" +
+         action + ">" + action + "</span></td><td class=muted>" + ip +
+         "</td></tr>";
 }
 
 // Prepend rows from one file so that later entries end up on top.

@@ -1,5 +1,14 @@
 # Requirements — v1 (rev 3: Plan B confirmed, no auto-close)
 
+> **v1 ACCEPTED 2026-08-20.** Installed at the gate 2026-08-04; ran ~2 weeks
+> unattended with no intervention, exceeding acceptance criterion 5.
+> All five acceptance criteria met.
+>
+> Post-acceptance option (2026-08-20): a `REQUIRE_LOGIN` build flag
+> (default `true`, see `firmware/include/config.example.h`) can disable the
+> web login, relaxing **F2** for installs that rely on WiFi security alone.
+> Acceptance was run with the login enabled.
+
 Rev 2, 2026-07-30: opener identified as **Nice Robus** (sliding gate, BlueBUS platform).
 Manual research (see `NICE-ROBUS-NOTES.md`) resolved risks R1–R3 and R5 of rev 1 and
 **changed the trigger method from RF replay to a wired step-by-step contact.**
@@ -45,6 +54,17 @@ same as today. Board function L1 stays OFF; enabling it later is a v2 option.
 - "Sacrificial remote" architecture (Plan A) — evaluated, rejected in favor of Plan B.
 - Access from outside the home network.
 - Pedestrian-gate command (radio Mode I T2 does partial open — could be a second app button in v2, wired to nothing extra: partial open is only available via radio, so v2 would need an OXI/second channel trick — parked).
+- ~~English localization alongside the Croatian UI~~ — **done 2026-08-20**:
+  client-side HR/EN toggle on every page, Croatian default, choice saved per
+  browser (localStorage); stored log entries stay in Croatian and are translated
+  at display time.
+- Better UI (visual polish of the web app).
+- **Standalone AP mode**: option for the ESP32 to emit its own WiFi network instead
+  of joining the home network. Design constraints: **OTA flashing must keep working**
+  (espota targets the AP's IP, default 192.168.4.1 — mDNS `kapija.local` may not
+  resolve on the AP, and the flashing laptop must join the ESP32's network);
+  phones lose internet while connected to the AP; no NTP reachable in AP mode, so
+  log timestamps need a fallback (uptime-based or time set from the client).
 
 ## Remaining risks / open questions
 
