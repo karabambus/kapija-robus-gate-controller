@@ -37,6 +37,7 @@ const char kCss[] =
     "text-transform:uppercase;letter-spacing:.06em;border:2px solid #1a1a1a}"
     "body.gclosed .chip{background:#dcebdd;color:#1b5e20}"
     "body.gopen .chip{background:#f6c90e}"
+    "body.gmoving .chip{background:#fff}"
     "button{display:block;width:100%;min-height:96px;box-sizing:border-box;"
     "font:800 20px/1.2 'Arial Narrow',Arial,system-ui,sans-serif;"
     "text-transform:uppercase;letter-spacing:.1em;background:#1a1a1a;"
@@ -73,7 +74,7 @@ const char kI18nJs[] =
     "out:'Odjava',logtitle:'Dnevnik',time:'Vrijeme',action:'Akcija',"
     "empty:'Još nema zapisa.',back:'← Natrag',pw:'Lozinka',login:'Prijava',"
     "wrong:'Pogrešna lozinka.',sw:'EN',older:'stariji zapisi nisu prikazani',"
-    "wait:'Pričekaj…',err403:'Zahtjev odbijen',"
+    "moving:'U POKRETU',wait:'Pričekaj…',err403:'Zahtjev odbijen',"
     "errnet:'Nema veze s uređajem',"
     "a_prijava:'prijava',a_otvaranje:'otvaranje',a_zatvaranje:'zatvaranje',"
     "a_start:'pokretanje'},"
@@ -81,7 +82,7 @@ const char kI18nJs[] =
     "btn:'OPEN / CLOSE',log:'Access log',out:'Log out',logtitle:'Log',"
     "time:'Time',action:'Action',empty:'No entries yet.',back:'← Back',"
     "pw:'Password',login:'Log in',wrong:'Wrong password.',sw:'HR',"
-    "older:'older entries not shown',"
+    "older:'older entries not shown',moving:'MOVING',"
     "wait:'Wait…',err403:'Request rejected',errnet:'No connection to device',"
     "a_prijava:'login',"
     "a_otvaranje:'opening',a_zatvaranje:'closing',a_start:'startup'}};"
@@ -159,9 +160,12 @@ void sendMainPage() {
       "<script>"
       "let j=null;"
       "function render(){let s=document.getElementById('state');"
-      "document.body.className=j?(j.open?'gopen':'gclosed'):'';"
+      "let mv=j&&j.mov>=0;"
+      "document.body.className=!j?'':mv?'gmoving':j.open?'gopen':'gclosed';"
       "if(!j){s.innerHTML='<span class=chip>'+t('load')+'</span>';return}"
-      "s.innerHTML='<span class=chip>'+t(j.open?'open':'closed')+'</span> "
+      "let c=mv?t('moving')+(j.mov>0?' '+j.mov+' s':'')"
+      ":t(j.open?'open':'closed');"
+      "s.innerHTML='<span class=chip>'+c+'</span> "
       "<span class=muted>'+j.time+'</span>';"
       "document.getElementById('diag').textContent="
       "j.v+' · '+j.ip+' · '+j.net+' · uptime '+j.up}"
@@ -179,6 +183,7 @@ void sendMainPage() {
       "catch(e){msg(t('errnet'))}"
       "setTimeout(()=>{b.disabled=false;st()},2000);}"
       "applyLang();st();setInterval(st,3000);"
+      "setInterval(()=>{if(j&&j.mov>0){j.mov--;render()}},1000);"
       "</script>";
   srv->send(200, "text/html", h);
 }
@@ -247,8 +252,11 @@ void handleStatus() {
     return;
   }
   unsigned long upMin = millis() / 60000UL;
+  long mr = gate::movingRemainMs();
   String j = "{\"open\":";
   j += gate::isOpen() ? "true" : "false";
+  // mov: seconds of travel left; 0 = moving with unknown deadline; -1 = still
+  j += ",\"mov\":" + String(mr < 0 ? -1 : (mr + 999) / 1000);
   j += ",\"time\":\"" + timeutil::nowString() + "\"";
 #if WIFI_AP_MODE
   j += ",\"ip\":\"" + WiFi.softAPIP().toString() + "\"";

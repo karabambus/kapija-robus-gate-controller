@@ -23,3 +23,14 @@ static_assert(WIFI_AP_MODE == true || WIFI_AP_MODE == false,
 static_assert(sizeof(AP_PASS) >= 9,
               "AP_PASS must be at least 8 characters (WPA2 minimum)");
 #endif
+
+// Gate state settling / travel timing (v1.2) — defaults for older config.h.
+#ifndef STATE_SETTLE_MS
+#define STATE_SETTLE_MS 4000
+#endif
+#ifndef TRAVEL_OPEN_MS
+#define TRAVEL_OPEN_MS 30000
+#endif
+#ifndef TRAVEL_CLOSE_MS
+#define TRAVEL_CLOSE_MS 30000
+#endif

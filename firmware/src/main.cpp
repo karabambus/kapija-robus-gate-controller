@@ -121,6 +121,7 @@ void setup() {
 void loop() {
   server.handleClient();
   ArduinoOTA.handle();
+  gate::tick();
 
   // One boot entry per run, written once the clock has synced so it carries a
   // real timestamp (or after 60 s for AP/unsynced builds, timestamped "—").
