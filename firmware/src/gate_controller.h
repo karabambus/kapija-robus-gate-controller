@@ -14,4 +14,7 @@ bool isOpen();
 // Returns false if called again within the cooldown window.
 bool trigger();
 
+// Milliseconds since the last successful trigger (large value if never).
+unsigned long msSinceTrigger();
+
 }  // namespace gate

@@ -4,20 +4,10 @@
 
 #include "access_log.h"
 #include "auth.h"
-#include "config.h"
+#include "config_defaults.h"
 #include "gate_controller.h"
 #include "time_util.h"
 #include "version.h"
-
-// Default for config.h files created before this option existed.
-#ifndef REQUIRE_LOGIN
-#define REQUIRE_LOGIN true
-#endif
-
-// Catch a mistyped value (e.g. a quoted "false", which is truthy) at compile
-// time instead of silently leaving login in the wrong state.
-static_assert(REQUIRE_LOGIN == true || REQUIRE_LOGIN == false,
-              "REQUIRE_LOGIN must be true or false (unquoted)");
 
 namespace webui {
 
@@ -83,15 +73,20 @@ const char kI18nJs[] =
     "out:'Odjava',logtitle:'Dnevnik',time:'Vrijeme',action:'Akcija',"
     "empty:'Još nema zapisa.',back:'← Natrag',pw:'Lozinka',login:'Prijava',"
     "wrong:'Pogrešna lozinka.',sw:'EN',older:'stariji zapisi nisu prikazani',"
+    "wait:'Pričekaj…',err403:'Zahtjev odbijen',"
+    "errnet:'Nema veze s uređajem',"
     "a_prijava:'prijava',a_otvaranje:'otvaranje',a_zatvaranje:'zatvaranje',"
     "a_start:'pokretanje'},"
     "en:{state:'Status',load:'loading…',open:'OPEN',closed:'CLOSED',"
     "btn:'OPEN / CLOSE',log:'Access log',out:'Log out',logtitle:'Log',"
     "time:'Time',action:'Action',empty:'No entries yet.',back:'← Back',"
     "pw:'Password',login:'Log in',wrong:'Wrong password.',sw:'HR',"
-    "older:'older entries not shown',a_prijava:'login',"
+    "older:'older entries not shown',"
+    "wait:'Wait…',err403:'Request rejected',errnet:'No connection to device',"
+    "a_prijava:'login',"
     "a_otvaranje:'opening',a_zatvaranje:'closing',a_start:'startup'}};"
     "let lang=localStorage.getItem('lang')||'hr';"
+    "if(!L[lang])lang='hr';"  // foreign value on a shared origin (192.168.4.1)
     "function t(k){return L[lang][k]}"
     "function ta(a){return L[lang]['a_'+a]||a}"
     "function applyLang(){document.documentElement.lang=lang;"
@@ -110,13 +105,20 @@ bool authed() {
 }
 
 // CSRF guard for state-changing requests. Browsers send an Origin header on
-// cross-site requests, and it cannot match the host this app was served from —
-// so a drive-by page on some phone's browser can't POST /toggle. The session
-// cookie used to be this barrier; REQUIRE_LOGIN=false removes it, and this
-// check works in both modes. Non-browser clients (curl) send no Origin.
+// cross-site requests; we accept only the device's own identities. Comparing
+// against the Host header instead would let DNS rebinding through (an
+// attacker hostname resolving to this device makes Origin and Host match).
+// Non-browser clients (curl) send no Origin and pass. Deliberately strict:
+// a reverse-proxy/HTTPS front-end is not a supported deployment.
 bool originAllowed() {
   if (!srv->hasHeader("Origin")) return true;
-  return srv->header("Origin") == "http://" + srv->hostHeader();
+  const String& origin = srv->header("Origin");
+#if WIFI_AP_MODE
+  String ip = WiFi.softAPIP().toString();
+#else
+  String ip = WiFi.localIP().toString();
+#endif
+  return origin == "http://" + ip || origin == "http://" HOSTNAME ".local";
 }
 
 void sendLoginPage(bool wrongPassword) {
@@ -145,6 +147,7 @@ void sendMainPage() {
       "<p class=lbl data-i=state></p>"
       "<div id=state></div>"
       "<button id=btn onclick=trig() data-i=btn></button>"
+      "<p class=err id=msg></p>"
       "<p class=links><a href=/log data-i=log></a>"
 #if REQUIRE_LOGIN
       " · <a href=/logout data-i=out></a>"
@@ -165,8 +168,15 @@ void sendMainPage() {
       "async function st(){try{let r=await fetch('/status');"
       "if(r.status==401){location='/';return}"
       "j=await r.json();render()}catch(e){}}"
+      "function msg(x){let e=document.getElementById('msg');"
+      "e.textContent=x;if(x)setTimeout(()=>{e.textContent=''},4000)}"
       "async function trig(){let b=document.getElementById('btn');"
-      "b.disabled=true;await fetch('/toggle',{method:'POST'});"
+      "b.disabled=true;msg('');"
+      "try{let r=await fetch('/toggle',{method:'POST'});"
+      "if(r.status==401){location='/';return}"
+      "if(r.status==403)msg(t('err403'));"
+      "else if((await r.text())=='cooldown')msg(t('wait'))}"
+      "catch(e){msg(t('errnet'))}"
       "setTimeout(()=>{b.disabled=false;st()},2000);}"
       "applyLang();st();setInterval(st,3000);"
       "</script>";
@@ -182,6 +192,12 @@ void handleRoot() {
 }
 
 void handleLogin() {
+  // Same CSRF guard as /toggle: without it a cross-site form POST could
+  // brute-force the password or trip the global lockout for every tenant.
+  if (!originAllowed()) {
+    srv->send(403, "text/plain", "forbidden");
+    return;
+  }
   if (auth::lockedOut()) {
     srv->send(429, "text/plain",
               "Previše pokušaja, pričekaj minutu. / "

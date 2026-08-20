@@ -2,7 +2,7 @@
 
 #include <time.h>
 
-#include "config.h"
+#include "config_defaults.h"
 
 namespace timeutil {
 
@@ -12,7 +12,15 @@ constexpr time_t kSyncThreshold = 1700000000;
 }
 
 void begin() {
+#if WIFI_AP_MODE
+  // No NTP reachable on the standalone network, but the timezone still
+  // matters: historical epochs from station-mode service must keep rendering
+  // in local time, not silently shift to UTC.
+  setenv("TZ", TZ_INFO, 1);
+  tzset();
+#else
   configTzTime(TZ_INFO, "pool.ntp.org", "time.google.com");
+#endif
 }
 
 bool synced() {

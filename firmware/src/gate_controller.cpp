@@ -35,4 +35,8 @@ bool trigger() {
   return true;
 }
 
+unsigned long msSinceTrigger() {
+  return millis() - lastTriggerMs;
+}
+
 }  // namespace gate

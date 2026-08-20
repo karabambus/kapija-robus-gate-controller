@@ -20,6 +20,15 @@ constexpr size_t kRotateBytes = 60000;
 // reach ~120 kB of rows — far more than the heap can hold in one String.
 constexpr size_t kMaxRows = 100;
 
+// Log lines are our own writes, but a line corrupted by power loss mid-append
+// must not be able to break the page's markup.
+String escapeHtml(String s) {
+  s.replace("&", "&amp;");
+  s.replace("<", "&lt;");
+  s.replace("\"", "&quot;");
+  return s;
+}
+
 // Convert one raw log line into an HTML table row; empty string if malformed.
 String lineToRow(const String& line) {
   int a = line.indexOf(';');
@@ -30,9 +39,11 @@ String lineToRow(const String& line) {
   String action = line.substring(a + 1, b);
   String ip = line.substring(b + 1);
   // data-act carries the stored action key so the page can translate it
-  // client-side without rewriting old log entries.
-  return "<tr><td>" + timeutil::formatEpoch(epoch) + "</td><td><span data-act=" +
-         action + ">" + action + "</span></td><td class=muted>" + ip +
+  // client-side without rewriting old log entries. Quoted + escaped so file
+  // content can never escape the attribute.
+  return "<tr><td>" + timeutil::formatEpoch(epoch) +
+         "</td><td><span data-act=\"" + escapeHtml(action) + "\">" +
+         escapeHtml(action) + "</span></td><td class=muted>" + escapeHtml(ip) +
          "</td></tr>";
 }
 
