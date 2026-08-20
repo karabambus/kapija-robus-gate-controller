@@ -85,10 +85,18 @@ same as today. Board function L1 stays OFF; enabling it later is a v2 option.
     device like any file upload. Removes both espota failure modes: no
     device→computer return connection (host firewalls irrelevant) and no
     ini/shell password mangling. espota stays as fallback.
-  - **Client-supplied time for AP mode**: phones know the time — page JS sends
-    `Date.now()` to a small endpoint, ESP32 calls `settimeofday`. Accept only
-    when the clock is unsynced or clearly drifted; first visit after boot sets
-    the clock. (Hardware alternative: DS3231 RTC — v3 site-visit batch.)
+  - **Dual-mode WiFi (AP+STA)** (added 2026-08-20, after the AP field test):
+    ESP32 supports WIFI_AP_STA — join the home network AND broadcast the own
+    AP simultaneously. Would give a fallback control path when the router is
+    down, and would have made the AP-mode test trivial (no network hopping to
+    flash back). Needs thought: channel is shared with the router's, NTP and
+    OTA available via STA side, watchdog semantics change.
+  - ~~Client-supplied time for AP mode~~ — **done 2026-08-20 (v1.7)**: any
+    browser opening the app donates its clock via POST /time when /status
+    reports sync:false; origin-guarded, accepted only while unsynced, value
+    must be plausible (2023–2100). Field-verified in AP mode: phone joined the
+    AP and timestamps went from "—" to correct within seconds. (Hardware
+    alternative DS3231 RTC stays on the v3 list, now low priority.)
   - **v3 hardware (needs site visit)**: reed switch for certain closed-position
     sensing; buzzer chirp on trigger.
 - ~~Travel-time progress~~ — **done 2026-08-20 (v1.2)**: field test showed
@@ -97,7 +105,8 @@ same as today. Board function L1 stays OFF; enabling it later is a v2 option.
   (state must hold 4 s) and a per-direction backup travel timer from stopwatch
   measurements + ~20% margin (28→34 s open, 26→31 s close). The app shows a
   MOVING chip with a live countdown; panel colors follow settled states only.
-- ~~Standalone AP mode~~ — **done 2026-08-20**: `WIFI_AP_MODE` build flag
+- ~~Standalone AP mode~~ — **done 2026-08-20, field-tested same day** (phone
+  joined the AP, UI + trigger + donated clock all worked): `WIFI_AP_MODE` build flag
   (default `false`); `true` makes the ESP32 broadcast its own WPA2 network
   (`AP_SSID`/`AP_PASS`) instead of joining the home WiFi. OTA keeps working
   (join the AP, upload to 192.168.4.1). Known AP-mode trade-offs: phones drop
