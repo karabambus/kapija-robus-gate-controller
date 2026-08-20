@@ -23,19 +23,50 @@ namespace webui {
 namespace {
 WebServer* srv = nullptr;
 
+// "Machine Panel" design: industrial HMI look — warm concrete page, black
+// borders, stencil-style condensed uppercase type. Gate state colors the whole
+// panel via a body class set from JS: .gclosed = green, .gopen = caution
+// yellow + hazard stripe. Button presses sink into a hard offset shadow.
 const char kCss[] =
-    "<style>body{font-family:sans-serif;max-width:420px;margin:24px auto;"
-    "padding:0 12px;background:#f4f4f5;color:#18181b}h1{font-size:1.3em}"
-    ".card{background:#fff;border-radius:12px;padding:20px;"
-    "box-shadow:0 1px 4px rgba(0,0,0,.12)}button,input[type=password]{"
-    "font-size:1.1em;padding:12px;border-radius:10px;border:1px solid #d4d4d8;"
-    "width:100%;box-sizing:border-box}button{background:#2563eb;color:#fff;"
-    "border:0;cursor:pointer;font-weight:600}button:disabled{background:#a1a1aa}"
-    "#state{font-size:1.05em;margin:10px 0}.open{color:#dc2626;font-weight:700}"
-    ".closed{color:#16a34a;font-weight:700}a{color:#2563eb}"
-    "table{width:100%;border-collapse:collapse;font-size:.9em}"
-    "td{padding:6px 4px;border-bottom:1px solid #e4e4e7}"
-    ".muted{color:#71717a;font-size:.85em}</style>";
+    "<style>body{font-family:'Arial Narrow',Arial,system-ui,sans-serif;"
+    "background:#e8e5de;color:#1a1a1a;max-width:420px;margin:0 auto;"
+    "padding:12px}"
+    "h1{font-size:1.5em;font-weight:800;letter-spacing:.18em;"
+    "text-transform:uppercase;margin:14px 2px 10px}"
+    ".stripe{display:none;height:14px;border:2px solid #1a1a1a;"
+    "background:repeating-linear-gradient(45deg,#f6c90e 0 14px,#1a1a1a 14px "
+    "28px);margin:0 0 10px}"
+    "body.gopen .stripe{display:block}"
+    ".card{background:#f5f3ee;border:2px solid #1a1a1a;border-radius:4px;"
+    "padding:18px}"
+    ".lbl{font-size:13px;text-transform:uppercase;letter-spacing:.12em;"
+    "font-weight:700;color:#55524b;margin:0 0 6px}"
+    "#state{font-size:22px;margin:0 0 18px}"
+    ".chip{display:inline-block;padding:4px 10px;font-weight:800;"
+    "text-transform:uppercase;letter-spacing:.06em;border:2px solid #1a1a1a}"
+    "body.gclosed .chip{background:#dcebdd;color:#1b5e20}"
+    "body.gopen .chip{background:#f6c90e}"
+    "button{display:block;width:100%;min-height:96px;box-sizing:border-box;"
+    "font:800 20px/1.2 'Arial Narrow',Arial,system-ui,sans-serif;"
+    "text-transform:uppercase;letter-spacing:.1em;background:#1a1a1a;"
+    "color:#fff;border:3px solid #1a1a1a;border-radius:4px;"
+    "box-shadow:0 6px 0 #1a1a1a;cursor:pointer;margin:0 0 22px}"
+    "body.gclosed button{background:#2e7d32}"
+    "body.gopen button{background:#f6c90e;color:#1a1a1a}"
+    "button:active{transform:translateY(6px);box-shadow:none}"
+    "button:disabled{background:#9e9b93!important;color:#f5f3ee;"
+    "box-shadow:none;transform:translateY(6px)}"
+    ".low{min-height:56px;font-size:16px}"
+    "input[type=password]{width:100%;box-sizing:border-box;font-size:18px;"
+    "padding:12px;border:2px solid #1a1a1a;border-radius:4px;background:#fff}"
+    ".err{color:#b3261e;font-weight:700}"
+    "a{color:#1a1a1a}"
+    ".links{font-size:12px;text-transform:uppercase;letter-spacing:.1em;"
+    "font-weight:700;margin:0 0 10px}"
+    "table{width:100%;border-collapse:collapse;font-size:14px;margin:0 0 14px}"
+    "td{padding:8px 6px;border-bottom:1px solid #1a1a1a}"
+    "td b{font-size:13px;text-transform:uppercase;letter-spacing:.1em}"
+    ".muted{color:#6b675e;font-size:12px}</style>";
 
 const char kPageHead[] =
     "<!doctype html><meta charset=utf-8>"
@@ -89,11 +120,11 @@ void sendLoginPage(bool wrongPassword) {
   String h = kPageHead;
   h += "<title>Kapija</title>";
   h += kCss;
-  h += "<h1>🚗 Kapija</h1><div class=card><form method=POST action=/login>";
-  if (wrongPassword) h += "<p style='color:#dc2626' data-i=wrong></p>";
+  h += "<h1>KAPIJA</h1><div class=card><form method=POST action=/login>";
+  if (wrongPassword) h += "<p class=err data-i=wrong></p>";
   h += "<p><input type=password name=pw data-ph=pw autofocus></p>"
-       "<p><button data-i=login></button></p></form>"
-       "<p class=muted><a href=# data-i=sw onclick='swLang();return false'></a>"
+       "<p><button class=low data-i=login></button></p></form>"
+       "<p class=links><a href=# data-i=sw onclick='swLang();return false'></a>"
        "</p></div>";
   h += kI18nJs;
   h += "<script>applyLang()</script>";
@@ -105,10 +136,13 @@ void sendMainPage() {
   h += "<title>Kapija</title>";
   h += kCss;
   h +=
-      "<h1>🚗 Kapija</h1><div class=card>"
+      "<h1>KAPIJA</h1>"
+      "<div class=stripe></div>"
+      "<div class=card>"
+      "<p class=lbl data-i=state></p>"
       "<div id=state></div>"
       "<button id=btn onclick=trig() data-i=btn></button>"
-      "<p class=muted><a href=/log data-i=log></a>"
+      "<p class=links><a href=/log data-i=log></a>"
 #if REQUIRE_LOGIN
       " · <a href=/logout data-i=out></a>"
 #endif
@@ -119,11 +153,10 @@ void sendMainPage() {
       "<script>"
       "let j=null;"
       "function render(){let s=document.getElementById('state');"
-      "if(!j){s.innerHTML=t('state')+': <span class=muted>'+t('load')+'</span>';"
-      "return}"
-      "s.innerHTML=t('state')+': '+(j.open?'<span class=open>'+t('open')+'</span>'"
-      ":'<span class=closed>'+t('closed')+'</span>')"
-      "+' <span class=muted>('+j.time+')</span>';"
+      "document.body.className=j?(j.open?'gopen':'gclosed'):'';"
+      "if(!j){s.innerHTML='<span class=chip>'+t('load')+'</span>';return}"
+      "s.innerHTML='<span class=chip>'+t(j.open?'open':'closed')+'</span> "
+      "<span class=muted>'+j.time+'</span>';"
       "document.getElementById('diag').textContent="
       "j.ip+' · '+j.net+' · uptime '+j.up}"
       "async function st(){try{let r=await fetch('/status');"
@@ -220,12 +253,12 @@ void handleLog() {
   String h = kPageHead;
   h += "<title>Kapija — dnevnik</title>";
   h += kCss;
-  h += "<h1>📋 <span data-i=logtitle></span></h1><div class=card><table>"
+  h += "<h1><span data-i=logtitle></span></h1><div class=card><table>"
        "<tr><td><b data-i=time></b></td><td><b data-i=action></b></td>"
        "<td><b>IP</b></td></tr>";
   h += rows.length() ? rows
                      : "<tr><td colspan=3 class=muted data-i=empty></td></tr>";
-  h += "</table><p><a href=/ data-i=back></a> · "
+  h += "</table><p class=links><a href=/ data-i=back></a> · "
        "<a href=# data-i=sw onclick='swLang();return false'></a></p></div>";
   h += kI18nJs;
   h += "<script>applyLang()</script>";
