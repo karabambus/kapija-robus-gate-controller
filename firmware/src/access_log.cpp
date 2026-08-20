@@ -3,6 +3,8 @@
 #include <LittleFS.h>
 #include <time.h>
 
+#include <vector>
+
 #include "config.h"
 #include "time_util.h"
 
@@ -14,6 +16,9 @@ constexpr const char* kLogOld = "/log.old";
 // ~60 kB per generation keeps two generations well under the LittleFS
 // partition size while holding years of entries at ~30 bytes each.
 constexpr size_t kRotateBytes = 60000;
+// The page renders only the newest entries: both generations together can
+// reach ~120 kB of rows — far more than the heap can hold in one String.
+constexpr size_t kMaxRows = 100;
 
 // Convert one raw log line into an HTML table row; empty string if malformed.
 String lineToRow(const String& line) {
@@ -31,14 +36,14 @@ String lineToRow(const String& line) {
          "</td></tr>";
 }
 
-// Prepend rows from one file so that later entries end up on top.
-void collectRows(const char* path, String& rows) {
+// Feed one file's lines, oldest-first, into a ring of the newest kMaxRows.
+void collectLines(const char* path, std::vector<String>& ring, size_t& total) {
   File f = LittleFS.open(path, "r");
   if (!f) return;
   while (f.available()) {
     String line = f.readStringUntil('\n');
     line.trim();
-    if (line.length()) rows = lineToRow(line) + rows;
+    if (line.length()) ring[total++ % kMaxRows] = line;
   }
   f.close();
 }
@@ -58,9 +63,19 @@ void append(const char* action, const String& clientIp) {
 }
 
 String renderRowsHtml() {
+  std::vector<String> ring(kMaxRows);
+  size_t total = 0;
+  collectLines(kLogOld, ring, total);  // older generation first: chronological
+  collectLines(kLogFile, ring, total);
+  size_t n = total < kMaxRows ? total : kMaxRows;
   String rows;
-  collectRows(kLogOld, rows);
-  collectRows(kLogFile, rows);
+  rows.reserve(n * 100);
+  for (size_t i = 0; i < n; i++) {  // newest entry on top
+    rows += lineToRow(ring[(total - 1 - i) % kMaxRows]);
+  }
+  if (total > kMaxRows) {
+    rows += "<tr><td colspan=3 class=muted data-i=older></td></tr>";
+  }
   return rows;
 }
 

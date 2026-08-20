@@ -7,6 +7,7 @@
 #include "config.h"
 #include "gate_controller.h"
 #include "time_util.h"
+#include "version.h"
 
 // Default for config.h files created before this option existed.
 #ifndef REQUIRE_LOGIN
@@ -81,13 +82,15 @@ const char kI18nJs[] =
     "closed:'ZATVORENA',btn:'OTVORI / ZATVORI',log:'Dnevnik otvaranja',"
     "out:'Odjava',logtitle:'Dnevnik',time:'Vrijeme',action:'Akcija',"
     "empty:'Još nema zapisa.',back:'← Natrag',pw:'Lozinka',login:'Prijava',"
-    "wrong:'Pogrešna lozinka.',sw:'EN',a_prijava:'prijava',"
-    "a_otvaranje:'otvaranje',a_zatvaranje:'zatvaranje'},"
+    "wrong:'Pogrešna lozinka.',sw:'EN',older:'stariji zapisi nisu prikazani',"
+    "a_prijava:'prijava',a_otvaranje:'otvaranje',a_zatvaranje:'zatvaranje',"
+    "a_start:'pokretanje'},"
     "en:{state:'Status',load:'loading…',open:'OPEN',closed:'CLOSED',"
     "btn:'OPEN / CLOSE',log:'Access log',out:'Log out',logtitle:'Log',"
     "time:'Time',action:'Action',empty:'No entries yet.',back:'← Back',"
     "pw:'Password',login:'Log in',wrong:'Wrong password.',sw:'HR',"
-    "a_prijava:'login',a_otvaranje:'opening',a_zatvaranje:'closing'}};"
+    "older:'older entries not shown',a_prijava:'login',"
+    "a_otvaranje:'opening',a_zatvaranje:'closing',a_start:'startup'}};"
     "let lang=localStorage.getItem('lang')||'hr';"
     "function t(k){return L[lang][k]}"
     "function ta(a){return L[lang]['a_'+a]||a}"
@@ -158,7 +161,7 @@ void sendMainPage() {
       "s.innerHTML='<span class=chip>'+t(j.open?'open':'closed')+'</span> "
       "<span class=muted>'+j.time+'</span>';"
       "document.getElementById('diag').textContent="
-      "j.ip+' · '+j.net+' · uptime '+j.up}"
+      "j.v+' · '+j.ip+' · '+j.net+' · uptime '+j.up}"
       "async function st(){try{let r=await fetch('/status');"
       "if(r.status==401){location='/';return}"
       "j=await r.json();render()}catch(e){}}"
@@ -239,7 +242,8 @@ void handleStatus() {
   j += ",\"net\":\"signal " + String(WiFi.RSSI()) + " dBm\"";
 #endif
   j += ",\"up\":\"" + String(upMin / 1440) + "d " +
-       String((upMin / 60) % 24) + "h " + String(upMin % 60) + "m\"}";
+       String((upMin / 60) % 24) + "h " + String(upMin % 60) + "m\"";
+  j += ",\"v\":\"" FW_VERSION "\"}";
   srv->send(200, "application/json", j);
 }
 

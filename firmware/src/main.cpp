@@ -15,11 +15,14 @@
 #include <WebServer.h>
 #include <WiFi.h>
 
+#include <esp_system.h>
 #include <time.h>
 
+#include "access_log.h"
 #include "config.h"
 #include "gate_controller.h"
 #include "time_util.h"
+#include "version.h"
 #include "web_ui.h"
 
 // Default for config.h files created before this option existed. web_ui.cpp
@@ -41,6 +44,19 @@ WebServer server(80);
 constexpr unsigned long kWifiConnectTimeoutMs = 30000;
 // Reboot if WiFi stays down this long; DHCP/AP hiccups self-heal this way.
 constexpr unsigned long kWifiLostRebootMs = 60000;
+
+const char* resetReasonStr() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON: return "power-on";
+    case ESP_RST_SW: return "sw-reset";  // ESP.restart(): OTA, daily reboot
+    case ESP_RST_PANIC: return "panic";
+    case ESP_RST_INT_WDT:
+    case ESP_RST_TASK_WDT:
+    case ESP_RST_WDT: return "watchdog";
+    case ESP_RST_BROWNOUT: return "brownout";
+    default: return "other";
+  }
+}
 
 #if WIFI_AP_MODE
 void startWifi() {
@@ -114,6 +130,15 @@ void setup() {
 void loop() {
   server.handleClient();
   ArduinoOTA.handle();
+
+  // One boot entry per run, written once the clock has synced so it carries a
+  // real timestamp (or after 60 s for AP/unsynced builds, timestamped "—").
+  // The IP column of the row carries the firmware version and reset cause.
+  static bool bootLogged = false;
+  if (!bootLogged && (timeutil::synced() || millis() > 60000)) {
+    bootLogged = true;
+    accesslog::append("start", String(FW_VERSION " · ") + resetReasonStr());
+  }
 
 #if !WIFI_AP_MODE
   // WiFi watchdog: reboot after a sustained outage. Station mode only —

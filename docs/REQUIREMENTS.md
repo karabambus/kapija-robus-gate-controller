@@ -59,6 +59,34 @@ same as today. Board function L1 stays OFF; enabling it later is a v2 option.
   browser (localStorage); stored log entries stay in Croatian and are translated
   at display time.
 - Better UI (visual polish of the web app).
+- **Public README polish** (added 2026-08-20, **higher priority — do after live
+  testing**): make the GitHub landing page presentable — feature list, UI
+  screenshots (Machine Panel design), wiring/architecture picture, build photo
+  front and center, clear "what you need / how to build" flow for strangers
+  finding the repo.
+- Suggestions batch (added 2026-08-20):
+  - ~~Boot log entry + firmware version~~ — **done 2026-08-20**: every boot
+    appends a "start" log row carrying `FW_VERSION` + reset cause (power-on /
+    sw-reset / watchdog / brownout / panic); version also shown on the diag line.
+  - ~~Cap log page at newest 100 entries~~ — **done 2026-08-20**: the full
+    two-generation log (~120 kB) no longer gets built into one heap String.
+  - **PWA home-screen app**: inline web manifest + icon (data URI) so tenants
+    can "Add to Home Screen"; `navigator.vibrate` on press for physical feel.
+  - **Fast poll after press**: poll /status at 1 s for ~30 s after a trigger
+    (pairs with travel-time progress below).
+  - **"Gate open too long" banner**: caution banner (and blinking tab title)
+    when state stays OPEN past ~15 min.
+  - **Per-IP rate limit on /toggle**: ~6 triggers/min per IP — limits relay
+    wear from a runaway LAN script on the passwordless build.
+  - **CSV log export** (`/log.csv`) for off-device archiving.
+  - **v3 hardware (needs site visit)**: reed switch for certain closed-position
+    sensing; buzzer chirp on trigger.
+- **Travel-time progress** (added 2026-08-20): measure with a stopwatch how
+  long the gate takes to fully open (and close), then use that duration in the
+  app: after a button press, show an "opening… ~N s" progress indication until
+  the timer runs out. (S.C.A. transitions instantly — measured on site, no
+  flashing during movement — so live movement detection is not available; a
+  fixed measured timer is the way.)
 - ~~Standalone AP mode~~ — **done 2026-08-20**: `WIFI_AP_MODE` build flag
   (default `false`); `true` makes the ESP32 broadcast its own WPA2 network
   (`AP_SSID`/`AP_PASS`) instead of joining the home WiFi. OTA keeps working
