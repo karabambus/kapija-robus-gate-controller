@@ -1,5 +1,6 @@
 #include "time_util.h"
 
+#include <sys/time.h>
 #include <time.h>
 
 #include "config_defaults.h"
@@ -25,6 +26,14 @@ void begin() {
 
 bool synced() {
   return time(nullptr) > kSyncThreshold;
+}
+
+void setFromClient(long epochSeconds) {
+  if (synced()) return;  // NTP (or an earlier client) already won
+  // Plausibility window: after Nov 2023, before year 2100.
+  if (epochSeconds < (long)kSyncThreshold || epochSeconds > 4102444800L) return;
+  timeval tv = {(time_t)epochSeconds, 0};
+  settimeofday(&tv, nullptr);
 }
 
 String nowString() {

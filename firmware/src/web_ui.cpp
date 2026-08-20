@@ -171,9 +171,15 @@ void sendMainPage() {
       "<span class=muted>'+j.time+'</span>';"
       "document.getElementById('diag').textContent="
       "j.v+' · '+j.ip+' · '+j.net+' · uptime '+j.up}"
+      "let told=false;"
       "async function st(){try{let r=await fetch('/status');"
       "if(r.status==401){location='/';return}"
-      "j=await r.json();render()}catch(e){}}"
+      "j=await r.json();render();"
+      "if(j.sync===false&&!told){told=true;"
+      "fetch('/time',{method:'POST',"
+      "headers:{'Content-Type':'application/x-www-form-urlencoded'},"
+      "body:'t='+Math.floor(Date.now()/1000)})}"
+      "}catch(e){}}"
       "function msg(x){let e=document.getElementById('msg');"
       "e.textContent=x;if(x)setTimeout(()=>{e.textContent=''},4000)}"
       "async function trig(){let b=document.getElementById('btn');"
@@ -266,6 +272,8 @@ void handleStatus() {
   j += ",\"mov\":" + String(mr < 0 ? -1 : (mr + 999) / 1000);
   j += ",\"part\":";
   j += gate::isPartial() ? "true" : "false";
+  j += ",\"sync\":";
+  j += timeutil::synced() ? "true" : "false";
   j += ",\"time\":\"" + timeutil::nowString() + "\"";
 #if WIFI_AP_MODE
   j += ",\"ip\":\"" + WiFi.softAPIP().toString() + "\"";
@@ -278,6 +286,17 @@ void handleStatus() {
        String((upMin / 60) % 24) + "h " + String(upMin % 60) + "m\"";
   j += ",\"v\":\"" FW_VERSION "\"}";
   srv->send(200, "application/json", j);
+}
+
+// Clock donation from a browser (AP mode has no NTP). Origin-guarded like
+// every state-changing route; timeutil ignores it once the clock is set.
+void handleTime() {
+  if (!originAllowed()) {
+    srv->send(403, "text/plain", "forbidden");
+    return;
+  }
+  timeutil::setFromClient(srv->arg("t").toInt());
+  srv->send(200, "text/plain", "ok");
 }
 
 void handleLog() {
@@ -319,6 +338,7 @@ void begin(WebServer& server) {
     server.on("/logout", HTTP_GET, handleLogout);
   }
   server.on("/toggle", HTTP_POST, handleToggle);
+  server.on("/time", HTTP_POST, handleTime);
   server.on("/status", HTTP_GET, handleStatus);
   server.on("/log", HTTP_GET, handleLog);
   server.onNotFound([]() {
