@@ -1,4 +1,4 @@
-# gate-opener
+# Kapija - Robus gate controller
 
 WiFi remote control for a **Nice Robus 350** sliding-gate drive, built on an
 ESP32 that lives inside the drive housing. Tenants open the gate from a phone
