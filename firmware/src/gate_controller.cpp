@@ -37,6 +37,17 @@ constexpr unsigned long kFlipWindowMs = 4000;
 uint8_t flipCount = 0;
 unsigned long flipWindowStartMs = 0;
 
+// Detected external move, for the main loop to log: 0 none, 1 opening,
+// 2 closing. Without this, a remote-opened gate leaves no trace unless
+// someone happens to be watching the app.
+uint8_t extEvent = 0;
+
+// S.C.A. blink cadence diagnostics (min/max ms between raw transitions,
+// gaps over 10 s ignored) — to verify the settle and flip-confirm
+// thresholds against the real signal instead of guesses.
+unsigned long minFlipMs = 0, maxFlipMs = 0;
+uint32_t flipTotal = 0;
+
 void relayWrite(bool active) {
   digitalWrite(RELAY_PIN, (active == RELAY_ACTIVE_HIGH) ? HIGH : LOW);
 }
@@ -64,6 +75,12 @@ void begin() {
 void tick() {
   bool raw = rawIsOpen();
   if (raw != lastRaw) {
+    unsigned long gap = millis() - lastRawChangeMs;
+    if (lastRawChangeMs != 0 && gap < 10000) {
+      if (minFlipMs == 0 || gap < minFlipMs) minFlipMs = gap;
+      if (gap > maxFlipMs) maxFlipMs = gap;
+      flipTotal++;
+    }
     lastRaw = raw;
     lastRawChangeMs = millis();
     if (millis() - flipWindowStartMs > kFlipWindowMs) {
@@ -77,6 +94,7 @@ void tick() {
       moveStartMs = flipWindowStartMs;
       movingUntilMs =
           flipWindowStartMs + (settledOpen ? TRAVEL_CLOSE_MS : TRAVEL_OPEN_MS);
+      extEvent = settledOpen ? 2 : 1;
     }
   } else if (raw != settledOpen &&
              millis() - lastRawChangeMs >= STATE_SETTLE_MS) {
@@ -150,6 +168,18 @@ int moveState() {
 
 bool isPartial() {
   return settledOpen && partialOpen;
+}
+
+uint8_t takeExternalEvent() {
+  uint8_t e = extEvent;
+  extEvent = 0;
+  return e;
+}
+
+String blinkStats() {
+  if (flipTotal == 0) return "";
+  return String(minFlipMs) + "-" + String(maxFlipMs) + "ms x" +
+         String(flipTotal);
 }
 
 }  // namespace gate

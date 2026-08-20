@@ -170,7 +170,8 @@ void sendMainPage() {
       "s.innerHTML='<span class=chip>'+c+'</span> "
       "<span class=muted>'+j.time+'</span>';"
       "document.getElementById('diag').textContent="
-      "j.v+' · '+j.ip+' · '+j.net+' · uptime '+j.up}"
+      "j.v+' · '+j.ip+' · '+j.net+' · uptime '+j.up"
+      "+(j.blink?' · sca '+j.blink:'')}"
       "let told=false;"
       "async function st(){try{let r=await fetch('/status');"
       "if(r.status==401){location='/';return}"
@@ -284,6 +285,7 @@ void handleStatus() {
 #endif
   j += ",\"up\":\"" + String(upMin / 1440) + "d " +
        String((upMin / 60) % 24) + "h " + String(upMin % 60) + "m\"";
+  j += ",\"blink\":\"" + gate::blinkStats() + "\"";
   j += ",\"v\":\"" FW_VERSION "\"}";
   srv->send(200, "application/json", j);
 }

@@ -123,6 +123,13 @@ void loop() {
   ArduinoOTA.handle();
   gate::tick();
 
+  // Detected RF-remote / wall-button moves get a log row too ("daljinski"
+  // in the source column, where web entries carry the client IP).
+  uint8_t ext = gate::takeExternalEvent();
+  if (ext) {
+    accesslog::append(ext == 1 ? "otvaranje" : "zatvaranje", "daljinski");
+  }
+
   // One boot entry per run, written once the clock has synced so it carries a
   // real timestamp (or after 60 s for AP/unsynced builds, timestamped "—").
   // The IP column of the row carries the firmware version and reset cause.

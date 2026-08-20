@@ -1,6 +1,8 @@
 // Gate hardware interface: relay pulse on P.P. input, gate state from S.C.A.
 #pragma once
 
+#include <Arduino.h>
+
 namespace gate {
 
 // Configure GPIOs. Must be called first in setup() so the relay pin is driven
@@ -28,6 +30,14 @@ int moveState();
 // True when the settled state is OPEN but the gate is known to have been
 // stopped mid-travel by a web press (RF-remote stops are undetectable).
 bool isPartial();
+
+// Returns and clears the last detected external (RF remote / wall button)
+// move: 0 none, 1 opening, 2 closing. Poll from the main loop to log it.
+uint8_t takeExternalEvent();
+
+// S.C.A. blink cadence seen since boot, "min-max ms xN", or "" if none.
+// For verifying the settle and flip-confirm thresholds on the real gate.
+String blinkStats();
 
 // Pulse the relay (simulated button press on the Robus P.P. input).
 // Returns false if called again within the cooldown window.
