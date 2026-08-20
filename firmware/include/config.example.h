@@ -53,7 +53,7 @@
 #define TRIGGER_COOLDOWN_MS 2000  // ignore re-triggers within this window
 // S.C.A. bounces while the gate travels (measured on the RB350): a level must
 // hold this long before the reported state changes.
-#define STATE_SETTLE_MS 4000
+#define STATE_SETTLE_MS 2000
 // Measure YOUR gate with a stopwatch and add ~20% margin (example: RB350
 // measured 28 s open / 26 s close). Drive the app's "moving" countdown and
 // the settle-independent backup timer.

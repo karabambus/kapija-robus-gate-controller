@@ -65,8 +65,15 @@ bool trigger() {
   unsigned long now = millis();
   if (now - lastTriggerMs < TRIGGER_COOLDOWN_MS) return false;
   lastTriggerMs = now;
-  // Direction follows the settled state: closed -> opening, open -> closing.
-  movingUntilMs = now + (settledOpen ? TRAVEL_CLOSE_MS : TRAVEL_OPEN_MS);
+  if (movingRemainMs() >= 0) {
+    // Press during travel = stop (Robus step-by-step sequence). The outcome
+    // is unpredictable from here: drop the countdown, show plain MOVING, and
+    // let the settled S.C.A. state decide (half-open reads as OPEN).
+    movingUntilMs = 0;
+  } else {
+    // Direction follows the settled state: closed -> opening, open -> closing.
+    movingUntilMs = now + (settledOpen ? TRAVEL_CLOSE_MS : TRAVEL_OPEN_MS);
+  }
   relayWrite(true);
   delay(PULSE_MS);  // blocking is fine: the HTTP request waits on this anyway
   relayWrite(false);

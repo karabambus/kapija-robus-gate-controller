@@ -26,7 +26,7 @@ static_assert(sizeof(AP_PASS) >= 9,
 
 // Gate state settling / travel timing (v1.2) — defaults for older config.h.
 #ifndef STATE_SETTLE_MS
-#define STATE_SETTLE_MS 4000
+#define STATE_SETTLE_MS 2000
 #endif
 #ifndef TRAVEL_OPEN_MS
 #define TRAVEL_OPEN_MS 30000

@@ -77,7 +77,7 @@ const char kI18nJs[] =
     "moving:'U POKRETU',wait:'Pričekaj…',err403:'Zahtjev odbijen',"
     "errnet:'Nema veze s uređajem',"
     "a_prijava:'prijava',a_otvaranje:'otvaranje',a_zatvaranje:'zatvaranje',"
-    "a_start:'pokretanje'},"
+    "a_start:'pokretanje',a_stop:'stop'},"
     "en:{state:'Status',load:'loading…',open:'OPEN',closed:'CLOSED',"
     "btn:'OPEN / CLOSE',log:'Access log',out:'Log out',logtitle:'Log',"
     "time:'Time',action:'Action',empty:'No entries yet.',back:'← Back',"
@@ -85,7 +85,8 @@ const char kI18nJs[] =
     "older:'older entries not shown',moving:'MOVING',"
     "wait:'Wait…',err403:'Request rejected',errnet:'No connection to device',"
     "a_prijava:'login',"
-    "a_otvaranje:'opening',a_zatvaranje:'closing',a_start:'startup'}};"
+    "a_otvaranje:'opening',a_zatvaranje:'closing',a_start:'startup',"
+    "a_stop:'stop'}};"
     "let lang=localStorage.getItem('lang')||'hr';"
     "if(!L[lang])lang='hr';"  // foreign value on a shared origin (192.168.4.1)
     "function t(k){return L[lang][k]}"
@@ -236,8 +237,11 @@ void handleToggle() {
     srv->send(401, "text/plain", "unauthorized");
     return;
   }
-  // Log intent based on current state; the Robus P.P. input is a toggle.
-  const char* action = gate::isOpen() ? "zatvaranje" : "otvaranje";
+  // Log intent based on current state; the Robus P.P. input is a toggle,
+  // and a press during travel stops the gate.
+  const char* action = gate::movingRemainMs() >= 0 ? "stop"
+                       : gate::isOpen()            ? "zatvaranje"
+                                                   : "otvaranje";
   if (gate::trigger()) {
     accesslog::append(action, srv->client().remoteIP().toString());
     srv->send(200, "text/plain", "ok");
