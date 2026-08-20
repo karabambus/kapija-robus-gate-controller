@@ -91,12 +91,12 @@ same as today. Board function L1 stays OFF; enabling it later is a v2 option.
     the clock. (Hardware alternative: DS3231 RTC — v3 site-visit batch.)
   - **v3 hardware (needs site visit)**: reed switch for certain closed-position
     sensing; buzzer chirp on trigger.
-- **Travel-time progress** (added 2026-08-20): measure with a stopwatch how
-  long the gate takes to fully open (and close), then use that duration in the
-  app: after a button press, show an "opening… ~N s" progress indication until
-  the timer runs out. (S.C.A. transitions instantly — measured on site, no
-  flashing during movement — so live movement detection is not available; a
-  fixed measured timer is the way.)
+- ~~Travel-time progress~~ — **done 2026-08-20 (v1.2)**: field test showed
+  S.C.A. actually *bounces* during travel (the earlier "instant transition"
+  note only held for the settled ends), so v1.2 got both: a settle filter
+  (state must hold 4 s) and a per-direction backup travel timer from stopwatch
+  measurements + ~20% margin (28→34 s open, 26→31 s close). The app shows a
+  MOVING chip with a live countdown; panel colors follow settled states only.
 - ~~Standalone AP mode~~ — **done 2026-08-20**: `WIFI_AP_MODE` build flag
   (default `false`); `true` makes the ESP32 broadcast its own WPA2 network
   (`AP_SSID`/`AP_PASS`) instead of joining the home WiFi. OTA keeps working
