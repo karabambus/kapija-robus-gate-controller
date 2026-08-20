@@ -74,7 +74,8 @@ const char kI18nJs[] =
     "out:'Odjava',logtitle:'Dnevnik',time:'Vrijeme',action:'Akcija',"
     "empty:'Još nema zapisa.',back:'← Natrag',pw:'Lozinka',login:'Prijava',"
     "wrong:'Pogrešna lozinka.',sw:'EN',older:'stariji zapisi nisu prikazani',"
-    "moving:'U POKRETU',wait:'Pričekaj…',err403:'Zahtjev odbijen',"
+    "moving:'U POKRETU',partial:'DJELOMIČNO OTVORENA',"
+    "wait:'Pričekaj…',err403:'Zahtjev odbijen',"
     "errnet:'Nema veze s uređajem',"
     "a_prijava:'prijava',a_otvaranje:'otvaranje',a_zatvaranje:'zatvaranje',"
     "a_start:'pokretanje',a_stop:'stop'},"
@@ -82,7 +83,7 @@ const char kI18nJs[] =
     "btn:'OPEN / CLOSE',log:'Access log',out:'Log out',logtitle:'Log',"
     "time:'Time',action:'Action',empty:'No entries yet.',back:'← Back',"
     "pw:'Password',login:'Log in',wrong:'Wrong password.',sw:'HR',"
-    "older:'older entries not shown',moving:'MOVING',"
+    "older:'older entries not shown',moving:'MOVING',partial:'PARTLY OPEN',"
     "wait:'Wait…',err403:'Request rejected',errnet:'No connection to device',"
     "a_prijava:'login',"
     "a_otvaranje:'opening',a_zatvaranje:'closing',a_start:'startup',"
@@ -165,7 +166,7 @@ void sendMainPage() {
       "document.body.className=!j?'':mv?'gmoving':j.open?'gopen':'gclosed';"
       "if(!j){s.innerHTML='<span class=chip>'+t('load')+'</span>';return}"
       "let c=mv?t('moving')+(j.mov>0?' '+j.mov+' s':'')"
-      ":t(j.open?'open':'closed');"
+      ":j.open?t(j.part?'partial':'open'):t('closed');"
       "s.innerHTML='<span class=chip>'+c+'</span> "
       "<span class=muted>'+j.time+'</span>';"
       "document.getElementById('diag').textContent="
@@ -263,6 +264,8 @@ void handleStatus() {
   j += gate::isOpen() ? "true" : "false";
   // mov: seconds of travel left; 0 = moving with unknown deadline; -1 = still
   j += ",\"mov\":" + String(mr < 0 ? -1 : (mr + 999) / 1000);
+  j += ",\"part\":";
+  j += gate::isPartial() ? "true" : "false";
   j += ",\"time\":\"" + timeutil::nowString() + "\"";
 #if WIFI_AP_MODE
   j += ",\"ip\":\"" + WiFi.softAPIP().toString() + "\"";

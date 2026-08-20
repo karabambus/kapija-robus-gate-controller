@@ -25,6 +25,10 @@ long movingRemainMs();
 // reverses a CLOSING gate to full open.
 int moveState();
 
+// True when the settled state is OPEN but the gate is known to have been
+// stopped mid-travel by a web press (RF-remote stops are undetectable).
+bool isPartial();
+
 // Pulse the relay (simulated button press on the Robus P.P. input).
 // Returns false if called again within the cooldown window.
 bool trigger();

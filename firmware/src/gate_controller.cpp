@@ -21,6 +21,13 @@ enum Move { kIdle, kOpening, kClosing, kUnknown };
 Move move = kIdle;
 unsigned long moveStartMs = 0;
 
+// A web stop-press leaves the gate somewhere mid-travel. S.C.A. can only say
+// "not closed", but we know the stop happened, so the OPEN state gets a
+// "partial" qualifier until the next clean full travel. (An RF-remote stop is
+// invisible to us — that case still reads as plain OPEN.)
+bool pendingPartial = false;  // stop-press issued, waiting for settle
+bool partialOpen = false;     // settled open, but known to be mid-travel
+
 void relayWrite(bool active) {
   digitalWrite(RELAY_PIN, (active == RELAY_ACTIVE_HIGH) ? HIGH : LOW);
 }
@@ -53,11 +60,14 @@ void tick() {
   } else if (raw != settledOpen &&
              millis() - lastRawChangeMs >= STATE_SETTLE_MS) {
     settledOpen = raw;    // level held long enough: accept the new state
+    partialOpen = raw && pendingPartial;
+    pendingPartial = false;
     movingUntilMs = 0;    // travel finished — stop the backup timer early
     move = kIdle;
   }
   if (move != kIdle && millis() >= movingUntilMs && !rawUnsettled()) {
     move = kIdle;  // backup timer expired and S.C.A. is quiet: travel over
+    pendingPartial = false;
   }
 }
 
@@ -81,6 +91,7 @@ bool trigger() {
     move = settledOpen ? kClosing : kOpening;
     moveStartMs = now;
     movingUntilMs = now + (settledOpen ? TRAVEL_CLOSE_MS : TRAVEL_OPEN_MS);
+    pendingPartial = false;
   } else if (move == kClosing) {
     // Press during closing reverses to FULL OPEN (Robus safety sequence).
     // Reopen time ~ distance already closed, scaled to opening speed.
@@ -92,12 +103,14 @@ bool trigger() {
     move = kOpening;
     moveStartMs = now;
     movingUntilMs = now + est;
+    pendingPartial = false;
   } else {
     // Press during opening (or unknown motion) = stop. Outcome position is
     // unpredictable: drop the countdown, show plain MOVING, let the settled
-    // S.C.A. state decide (half-open reads as OPEN).
+    // S.C.A. state decide (half-open reads as OPEN, qualified "partial").
     move = kUnknown;
     movingUntilMs = 0;
+    pendingPartial = true;
   }
   relayWrite(true);
   delay(PULSE_MS);  // blocking is fine: the HTTP request waits on this anyway
@@ -112,6 +125,10 @@ unsigned long msSinceTrigger() {
 int moveState() {
   if (movingRemainMs() < 0) return 0;
   return move == kOpening ? 1 : move == kClosing ? 2 : 3;
+}
+
+bool isPartial() {
+  return settledOpen && partialOpen;
 }
 
 }  // namespace gate
