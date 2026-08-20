@@ -18,12 +18,6 @@ Diagrams: [`bench-wiring.svg`](bench-wiring.svg) ·
 | 10 kΩ resistor | S.C.A. current limit (install); 470 Ω–1 kΩ for bench test |
 | Glass fuse ~200 mA + inline holder | protects the Robus accessory supply |
 
-> ⚠ **The Joy-it SBC-XL6019 is NOT usable here.** Its own datasheet
-> (`datasheets/joyit-sbc-xl6019-datasheet.pdf`) defines it as a **step-up
-> (boost)** regulator: input 5–35 V, output 5–40 V — it can only raise voltage,
-> never make 5 V from 33 V. A buck (step-down) module with ≥40 V input rating
-> (LM2596 class) is required for the install stage. Bench stage is unaffected
-> (USB power).
 
 Datasheets for all verified components live in [`datasheets/`](datasheets/).
 Relay pin naming per the COM-RM01 manual: **− (GND), + (5 V supply),
@@ -53,14 +47,6 @@ PC817 orientation: hold the chip with its text readable and the **dot top-left
 4-C top-right** (pins number counter-clockwise — 3 and 4 sit diagonally from
 1 and 2). Both diagrams draw the chip in this real physical orientation. The
 chip must straddle the breadboard's center groove.
-
-**Breadboard fit:** the 38-pin NodeMCU-ESP32 is too wide for a single
-breadboard (no free rows remain). All four needed pins (VIN, GND, 26, 27) sit
-on the **same side** of the board, so either (a) skip the breadboard for the
-ESP32 entirely — female-female Dupont jumpers straight to the relay module,
-breadboard only for the PC817 + resistor + button — or (b) seat the ESP32 on
-the breadboard edge with the unused pin column hanging off, or (c) bridge two
-breadboards side by side.
 
 Checklist before plugging in USB:
 
