@@ -14,6 +14,13 @@ bool lastRaw = false;              // last raw S.C.A. sample
 unsigned long lastRawChangeMs = 0; // when the raw level last flipped
 unsigned long movingUntilMs = 0;   // backup travel deadline after a trigger
 
+// Travel bookkeeping. The Robus step-by-step sequence is asymmetric
+// (field-verified): a press during OPENING stops the gate, but a press
+// during CLOSING reverses it to fully open (obstacle-safety behavior).
+enum Move { kIdle, kOpening, kClosing, kUnknown };
+Move move = kIdle;
+unsigned long moveStartMs = 0;
+
 void relayWrite(bool active) {
   digitalWrite(RELAY_PIN, (active == RELAY_ACTIVE_HIGH) ? HIGH : LOW);
 }
@@ -47,6 +54,10 @@ void tick() {
              millis() - lastRawChangeMs >= STATE_SETTLE_MS) {
     settledOpen = raw;    // level held long enough: accept the new state
     movingUntilMs = 0;    // travel finished — stop the backup timer early
+    move = kIdle;
+  }
+  if (move != kIdle && millis() >= movingUntilMs && !rawUnsettled()) {
+    move = kIdle;  // backup timer expired and S.C.A. is quiet: travel over
   }
 }
 
@@ -65,14 +76,28 @@ bool trigger() {
   unsigned long now = millis();
   if (now - lastTriggerMs < TRIGGER_COOLDOWN_MS) return false;
   lastTriggerMs = now;
-  if (movingRemainMs() >= 0) {
-    // Press during travel = stop (Robus step-by-step sequence). The outcome
-    // is unpredictable from here: drop the countdown, show plain MOVING, and
-    // let the settled S.C.A. state decide (half-open reads as OPEN).
-    movingUntilMs = 0;
-  } else {
-    // Direction follows the settled state: closed -> opening, open -> closing.
+  if (movingRemainMs() < 0) {
+    // Idle: direction follows the settled state.
+    move = settledOpen ? kClosing : kOpening;
+    moveStartMs = now;
     movingUntilMs = now + (settledOpen ? TRAVEL_CLOSE_MS : TRAVEL_OPEN_MS);
+  } else if (move == kClosing) {
+    // Press during closing reverses to FULL OPEN (Robus safety sequence).
+    // Reopen time ~ distance already closed, scaled to opening speed.
+    unsigned long elapsed = now - moveStartMs;
+    unsigned long est =
+        (unsigned long)((uint64_t)elapsed * TRAVEL_OPEN_MS / TRAVEL_CLOSE_MS) +
+        3000;
+    if (est > TRAVEL_OPEN_MS) est = TRAVEL_OPEN_MS;
+    move = kOpening;
+    moveStartMs = now;
+    movingUntilMs = now + est;
+  } else {
+    // Press during opening (or unknown motion) = stop. Outcome position is
+    // unpredictable: drop the countdown, show plain MOVING, let the settled
+    // S.C.A. state decide (half-open reads as OPEN).
+    move = kUnknown;
+    movingUntilMs = 0;
   }
   relayWrite(true);
   delay(PULSE_MS);  // blocking is fine: the HTTP request waits on this anyway
@@ -82,6 +107,11 @@ bool trigger() {
 
 unsigned long msSinceTrigger() {
   return millis() - lastTriggerMs;
+}
+
+int moveState() {
+  if (movingRemainMs() < 0) return 0;
+  return move == kOpening ? 1 : move == kClosing ? 2 : 3;
 }
 
 }  // namespace gate

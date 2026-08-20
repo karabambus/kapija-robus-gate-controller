@@ -20,6 +20,11 @@ bool isOpen();
 // -1 when the gate is not moving.
 long movingRemainMs();
 
+// 0 = idle, 1 = opening, 2 = closing, 3 = moving with unknown direction.
+// Robus step-by-step is asymmetric: a press stops an OPENING gate but
+// reverses a CLOSING gate to full open.
+int moveState();
+
 // Pulse the relay (simulated button press on the Robus P.P. input).
 // Returns false if called again within the cooldown window.
 bool trigger();

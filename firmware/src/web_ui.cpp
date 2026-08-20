@@ -237,11 +237,13 @@ void handleToggle() {
     srv->send(401, "text/plain", "unauthorized");
     return;
   }
-  // Log intent based on current state; the Robus P.P. input is a toggle,
-  // and a press during travel stops the gate.
-  const char* action = gate::movingRemainMs() >= 0 ? "stop"
-                       : gate::isOpen()            ? "zatvaranje"
-                                                   : "otvaranje";
+  // Log what the press actually does: idle presses toggle by settled state;
+  // a press during opening stops; a press during closing reverses to open.
+  int mv = gate::moveState();
+  const char* action = mv == 2   ? "otvaranje"
+                       : mv != 0 ? "stop"
+                       : gate::isOpen() ? "zatvaranje"
+                                        : "otvaranje";
   if (gate::trigger()) {
     accesslog::append(action, srv->client().remoteIP().toString());
     srv->send(200, "text/plain", "ok");
