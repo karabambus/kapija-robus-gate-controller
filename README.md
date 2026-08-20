@@ -16,7 +16,7 @@ The ESP32 lives inside the Robus housing and connects to its control board:
 - **Gate state** — the Robus **S.C.A.** (open-gate indicator) output drives an
   optocoupler, so the app shows whether the gate is open or closed.
 - **Power** — the board's 24 V accessory tap (33 V measured) feeds a fused
-  XL6019 buck-boost converter set to 5 V.
+  LM2596-type buck converter (≥40 V input) set to 5 V.
 
 The web app (Croatian UI) offers login with a shared password, an open/close
 button with live gate state, and a persistent access log.
