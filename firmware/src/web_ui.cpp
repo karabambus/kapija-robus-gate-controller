@@ -125,7 +125,7 @@ void sendMainPage() {
       ":'<span class=closed>'+t('closed')+'</span>')"
       "+' <span class=muted>('+j.time+')</span>';"
       "document.getElementById('diag').textContent="
-      "j.ip+' · signal '+j.rssi+' dBm · uptime '+j.up}"
+      "j.ip+' · '+j.net+' · uptime '+j.up}"
       "async function st(){try{let r=await fetch('/status');"
       "if(r.status==401){location='/';return}"
       "j=await r.json();render()}catch(e){}}"
@@ -198,8 +198,13 @@ void handleStatus() {
   String j = "{\"open\":";
   j += gate::isOpen() ? "true" : "false";
   j += ",\"time\":\"" + timeutil::nowString() + "\"";
+#if WIFI_AP_MODE
+  j += ",\"ip\":\"" + WiFi.softAPIP().toString() + "\"";
+  j += ",\"net\":\"AP · " + String(WiFi.softAPgetStationNum()) + " conn.\"";
+#else
   j += ",\"ip\":\"" + WiFi.localIP().toString() + "\"";
-  j += ",\"rssi\":" + String(WiFi.RSSI());
+  j += ",\"net\":\"signal " + String(WiFi.RSSI()) + " dBm\"";
+#endif
   j += ",\"up\":\"" + String(upMin / 1440) + "d " +
        String((upMin / 60) % 24) + "h " + String(upMin % 60) + "m\"}";
   srv->send(200, "application/json", j);

@@ -7,6 +7,16 @@
 #define WIFI_SSID "CHANGE-ME"
 #define WIFI_PASS "CHANGE-ME"
 
+// Standalone mode: set true and the ESP32 broadcasts its own WiFi network
+// (AP_SSID/AP_PASS below) instead of joining the one above. Phones connect to
+// that network and open http://192.168.4.1 (kapija.local may also work).
+// Trade-offs: no internet on that network (phones drop offline while
+// connected; no NTP, so log entries show "—" instead of a date) and OTA
+// flashing means joining the AP and uploading to 192.168.4.1.
+#define WIFI_AP_MODE false
+#define AP_SSID "Kapija"
+#define AP_PASS "CHANGE-ME-8+CHARS"  // WPA2 requires at least 8 characters
+
 // --- Access ---
 // Set to false to skip the login page entirely and rely on WiFi security alone:
 // anyone who can join the WiFi can then operate the gate and read the log

@@ -15,7 +15,7 @@ src/
 ├── auth.*                # shared-password login, RAM sessions, lockout
 ├── access_log.*          # persistent log on LittleFS, rotation
 ├── time_util.*           # NTP + local-time formatting (Europe/Zagreb)
-└── web_ui.*              # HTTP routes + HTML (UI text in Croatian)
+└── web_ui.*              # HTTP routes + HTML (Croatian UI, English toggle)
 ```
 
 ## Build & flash
@@ -48,7 +48,19 @@ no need to open the gate housing:
 Fallback: USB flashing always keeps working — plug a cable into the board
 and comment the `espota` lines back out.
 
+**Standalone AP builds** (`WIFI_AP_MODE true`): OTA still works. Join the
+ESP32's own WiFi network (`AP_SSID`) from the flashing computer and set
+`upload_port = 192.168.4.1` in `platformio.ini` — mDNS (`kapija.local`) may
+not resolve on the AP network, the IP always works.
+
 ## Configuration notes
+
+- `WIFI_AP_MODE` — `false` (default) joins the home WiFi; `true` makes the
+  ESP32 broadcast its own network instead (`AP_SSID`/`AP_PASS`, WPA2, phones
+  browse to `http://192.168.4.1`). On the AP network there is no internet:
+  connected phones drop offline for the duration, and no NTP means log
+  entries show "—" instead of a date (the device reboots on a 48 h uptime
+  cadence instead of the 4 a.m. schedule).
 
 - `RELAY_ACTIVE_HIGH` — if the relay clicks ON at boot and releases after,
   flip this to `false`.

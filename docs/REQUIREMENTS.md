@@ -59,12 +59,12 @@ same as today. Board function L1 stays OFF; enabling it later is a v2 option.
   browser (localStorage); stored log entries stay in Croatian and are translated
   at display time.
 - Better UI (visual polish of the web app).
-- **Standalone AP mode**: option for the ESP32 to emit its own WiFi network instead
-  of joining the home network. Design constraints: **OTA flashing must keep working**
-  (espota targets the AP's IP, default 192.168.4.1 — mDNS `kapija.local` may not
-  resolve on the AP, and the flashing laptop must join the ESP32's network);
-  phones lose internet while connected to the AP; no NTP reachable in AP mode, so
-  log timestamps need a fallback (uptime-based or time set from the client).
+- ~~Standalone AP mode~~ — **done 2026-08-20**: `WIFI_AP_MODE` build flag
+  (default `false`); `true` makes the ESP32 broadcast its own WPA2 network
+  (`AP_SSID`/`AP_PASS`) instead of joining the home WiFi. OTA keeps working
+  (join the AP, upload to 192.168.4.1). Known AP-mode trade-offs: phones drop
+  offline while connected; no NTP, so log entries show "—" instead of a date
+  and the maintenance reboot runs on a 48 h uptime cadence instead of at 4 a.m.
 
 ## Remaining risks / open questions
 

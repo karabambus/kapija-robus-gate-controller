@@ -23,6 +23,10 @@ The web app (Croatian UI, English toggle) offers login with a shared password (o
 security alone), an open/close button with live gate state, and a persistent
 access log.
 
+The ESP32 normally joins the home WiFi; a `WIFI_AP_MODE` build flag instead
+makes it broadcast its own WPA2 network for installs with no router in range
+(see `firmware/README.md` for the trade-offs).
+
 ## Repository layout
 
 ```

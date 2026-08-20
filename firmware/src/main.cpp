@@ -22,6 +22,19 @@
 #include "time_util.h"
 #include "web_ui.h"
 
+// Default for config.h files created before this option existed. web_ui.cpp
+// also tests this macro with #if, where undefined likewise evaluates to 0 —
+// keep false as the default so both files agree on a stale config.
+#ifndef WIFI_AP_MODE
+#define WIFI_AP_MODE false
+#endif
+static_assert(WIFI_AP_MODE == true || WIFI_AP_MODE == false,
+              "WIFI_AP_MODE must be true or false (unquoted)");
+#if WIFI_AP_MODE
+static_assert(sizeof(AP_PASS) >= 9,
+              "AP_PASS must be at least 8 characters (WPA2 minimum)");
+#endif
+
 namespace {
 WebServer server(80);
 
@@ -29,7 +42,16 @@ constexpr unsigned long kWifiConnectTimeoutMs = 30000;
 // Reboot if WiFi stays down this long; DHCP/AP hiccups self-heal this way.
 constexpr unsigned long kWifiLostRebootMs = 60000;
 
-void connectWifi() {
+#if WIFI_AP_MODE
+void startWifi() {
+  WiFi.mode(WIFI_AP);
+  WiFi.softAPsetHostname(HOSTNAME);
+  WiFi.softAP(AP_SSID, AP_PASS);
+  Serial.print("AP \"" AP_SSID "\" started, IP: ");
+  Serial.println(WiFi.softAPIP());
+}
+#else
+void startWifi() {
   WiFi.mode(WIFI_STA);
   WiFi.setHostname(HOSTNAME);
   WiFi.setSleep(true);  // modem sleep: lower power and self-heating
@@ -53,6 +75,7 @@ void connectWifi() {
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
 }
+#endif
 }  // namespace
 
 void setup() {
@@ -63,9 +86,11 @@ void setup() {
     Serial.println("LittleFS mount failed");
   }
 
-  connectWifi();
+  startWifi();
   MDNS.begin(HOSTNAME);  // http://<HOSTNAME>.local
-  timeutil::begin();
+#if !WIFI_AP_MODE
+  timeutil::begin();  // NTP — unreachable on the standalone AP network
+#endif
 
   // Over-the-air updates: `pio run -t upload` over WiFi, no USB needed.
   ArduinoOTA.setHostname(HOSTNAME);
@@ -90,7 +115,10 @@ void loop() {
   server.handleClient();
   ArduinoOTA.handle();
 
-  // WiFi watchdog: reboot after a sustained outage.
+#if !WIFI_AP_MODE
+  // WiFi watchdog: reboot after a sustained outage. Station mode only —
+  // WiFi.status() never reads WL_CONNECTED while running as an AP, so this
+  // would reboot-loop a standalone build.
   static unsigned long lostSinceMs = 0;
   if (WiFi.status() == WL_CONNECTED) {
     lostSinceMs = 0;
@@ -111,6 +139,14 @@ void loop() {
       ESP.restart();
     }
   }
+#else
+  // Standalone AP: no NTP, so the clock-based reboot above can never fire.
+  // Reboot on uptime instead (also long before the 49-day millis() wrap).
+  if (DAILY_REBOOT_HOUR >= 0 && millis() > 48 * 3600 * 1000UL) {
+    Serial.println("Scheduled maintenance reboot (uptime)");
+    ESP.restart();
+  }
+#endif
 
   delay(2);  // yield; keeps the idle task fed
 }

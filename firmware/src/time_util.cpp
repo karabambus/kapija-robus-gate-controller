@@ -20,7 +20,9 @@ bool synced() {
 }
 
 String nowString() {
-  if (!synced()) return "vrijeme nije sinkronizirano";
+  // "—" is language-neutral: shown briefly at boot in station mode, and
+  // permanently in standalone AP mode where no NTP is reachable.
+  if (!synced()) return "—";
   time_t t = time(nullptr);
   struct tm tm;
   localtime_r(&t, &tm);
