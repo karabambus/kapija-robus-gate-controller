@@ -4,10 +4,8 @@ WiFi remote control for a **Nice Robus 350** sliding-gate drive, built on an
 ESP32 that lives inside the drive housing. Tenants open the gate from a phone
 browser on the home network; every action is logged. The existing RF remotes
 keep working unchanged, and the whole thing runs LAN-only with no cloud, no
-accounts and no external services.
-
-In production since 2026-08-04. v1 passed a two-week unattended field test;
-currently running v1.6.
+accounts and no external services. Field-tested and in daily use at a real
+gate.
 
 <img src="hardware/build.jpeg" alt="Assembled controller in its box" width="420">
 
@@ -23,8 +21,7 @@ state-colored: green means the gate is closed and secured; caution yellow
 with a hazard stripe means it stands open. Croatian UI with an English
 toggle (choice remembered per browser).
 
-The state handling mirrors the real Robus step-by-step sequence, learned by
-field testing:
+The state handling mirrors the real Robus step-by-step sequence:
 
 - Press while closed: opens, with a live MOVING countdown from the measured
   travel time.
@@ -47,10 +44,15 @@ field testing:
 - Optional shared-password login (`REQUIRE_LOGIN`) with brute-force lockout,
   or passwordless operation for a trusted WiFi. CSRF origin checks guard the
   trigger endpoint either way.
-- Standalone AP mode (`WIFI_AP_MODE`): the ESP32 broadcasts its own WPA2
-  network for sites with no router in range.
-- OTA firmware updates: after the first USB flash you never open the
-  housing again.
+- Three WiFi modes: join the home network (default), broadcast a standalone
+  WPA2 access point (`WIFI_AP_MODE`) for sites with no router in range, or
+  dual mode (`WIFI_DUAL_MODE`) doing both at once - the ESP32's own network
+  keeps the gate controllable even while the router is down.
+- Works without internet: on a network with no NTP, any browser that opens
+  the app donates its clock, so log entries keep real timestamps.
+- Firmware updates from the browser: upload a new build on the `/update`
+  page (password-protected). After the first USB flash you never open the
+  housing again; espota remains as a fallback path.
 - Daily maintenance reboot at a quiet hour, skipped while the gate is open
   or was just used.
 
@@ -75,7 +77,7 @@ radio receiver stay untouched.
 
 ## Hardware
 
-Roughly 15 EUR in parts: an ESP32 devkit, a COM-RM01 relay module, a PC817
+Around 20 EUR in parts: an ESP32 devkit, a COM-RM01 relay module, a PC817
 optocoupler, an LM2596-type buck converter and a fuse.
 
 One spec is critical: the Robus "24 V" accessory tap actually measures
@@ -96,8 +98,9 @@ One spec is critical: the Robus "24 V" accessory tap actually measures
 4. `cp firmware/include/config.example.h firmware/include/config.h` and fill
    in WiFi credentials, passwords, pins, and your measured travel times.
 5. Build and flash: `pio run -t upload` over USB the first time; later
-   updates go over WiFi - see [firmware/README.md](firmware/README.md),
-   including the OTA troubleshooting section.
+   builds upload over WiFi from the browser `/update` page - see
+   [firmware/README.md](firmware/README.md), including the OTA
+   troubleshooting section.
 6. One drive setting: set level-2 function L4 so S.C.A. means "on when the
    leaf is open".
 7. Open `http://kapija.local` from a phone on the same WiFi.
@@ -108,14 +111,15 @@ Deliberately LAN-only: the web server must never be exposed to the internet
 (no port forwarding). On the local network, access is protected by the WiFi
 password, optionally a shared app password (`REQUIRE_LOGIN`), a brute-force
 lockout, and an Origin check that stops cross-site and DNS-rebinding tricks
-from triggering the gate. OTA flashing has its own separate password.
+from triggering the gate. Firmware flashing (`/update` and espota) has its
+own separate password.
 
 ## Repository layout
 
 ```
 firmware/   PlatformIO project (ESP32, Arduino framework, no external libs)
-hardware/   Bill of materials, wiring, platform notes, build photo
-docs/       Backlog and app screenshots
+hardware/   Bill of materials, wiring guide + diagrams, platform notes, datasheets
+docs/       Planned improvements and app screenshots
 ```
 
 Planned improvements live in [docs/BACKLOG.md](docs/BACKLOG.md).

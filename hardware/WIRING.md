@@ -102,9 +102,9 @@ terminal at the bottom of the housing is never touched by this project.
 Order of work:
 
 1. **Prepare the buck converter first, on the bench** (LM2596-type, ≥40 V
-   input — NOT the XL6019, see warning above): feed it 9–12 V, turn the trim
-   pot until the output reads **5.0 V**. Only a pre-adjusted converter goes to
-   the gate.
+   input — NOT a boost-type module like the XL6019, which can only step
+   voltage up): feed it 9–12 V, turn the trim pot until the output reads
+   **5.0 V**. Only a pre-adjusted converter goes to the gate.
 2. Robus **P.P. inner pin (+)** → fuse 200 mA → buck `IN+` (red).
 3. Robus **STOP inner pin (−)** → buck `IN−` (black).
 4. Buck `OUT+` → ESP32 `VIN` and relay `+` (orange).
@@ -113,8 +113,8 @@ Order of work:
    Dry contact — polarity irrelevant. The P.P. inner pin now holds two wires
    (tap feed + relay NO); use a ferrule.
 6. S.C.A. **right screw (+)** → **10 kΩ** → PC817 `A`; S.C.A. **left screw (−)**
-   → PC817 `K` (cyan). Polarity verified as-built at install (2026-08-04) —
-   on a different unit, if the app never shows "open", swap these two wires.
+   → PC817 `K` (cyan). Polarity can differ between units — if the app never
+   shows "open", swap these two wires.
 7. GPIO wiring identical to bench: `GPIO 26` → relay `S`, `GPIO 27` → PC817 `C`.
 8. Existing wiring (FLASH, BLUEBUS, STOP outer, mains) — **untouched**.
 

@@ -1,7 +1,7 @@
 # Bill of Materials
 
 Everything needed to build the controller as installed. Approximate hobby-store
-prices; total well under 30 € (assuming you own the tools). Datasheets for the
+prices; total around 20 € (assuming you own the tools). Datasheets for the
 verified parts are in [`datasheets/`](datasheets/).
 
 ## Electronics

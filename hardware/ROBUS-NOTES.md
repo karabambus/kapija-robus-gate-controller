@@ -26,7 +26,8 @@ input (LM2596 class). Details and part list in [BOM.md](BOM.md).
 ## Board settings and behavior
 
 - Level-2 function L4 ("open gate indicator") must be set so S.C.A. is
-  on while the leaf is open. This is the only board setting v1 needs.
+  on while the leaf is open. This is the only board setting the project
+  needs.
 - S.C.A. blinks during travel and is steady at the end positions. The
   firmware settle-filters it and uses the blinking to detect movement,
   including moves started with an RF remote.

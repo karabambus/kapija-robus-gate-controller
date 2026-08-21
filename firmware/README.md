@@ -65,7 +65,7 @@ password escaping involved - this path avoids every espota pitfall below.
 Fallback: USB flashing always keeps working — plug a cable into the board
 and comment the `espota` lines back out.
 
-### OTA troubleshooting (learned the hard way)
+### OTA troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
