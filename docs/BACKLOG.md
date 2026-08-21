@@ -119,6 +119,32 @@ Supporting infrastructure the above needs:
 - Hands-free trigger from the car: recognize a horn pattern (microphone)
   or headlight flashes (light sensor) at the gate. Needs a distinctive
   pattern - a single honk or flash must not open the gate for strangers
+- Parking occupancy via magnetometer at the gate: every parked car came
+  through the gate, so count vehicle passages with direction and keep
+  occupancy = entries - exits. A QMC5883L-class sensor (~2 EUR, I2C,
+  ~1 mA off the ESP32's own 3.3 V pin) sees a passing car as a large
+  slow field change; pedestrians, bikes and weather are invisible to it.
+  No radio involved, so no WiFi contention, and no per-car hardware.
+  Phase 1 (next site visit): one sensor inside the Robus housing, no
+  detection logic - just log raw readings for a week and eyeball them
+  against the named access log (free labeled data) to see if car
+  signatures stand out from the transformer hum and gate-movement
+  transients. Plastic enclosures are magnetically invisible; steel is
+  not, so mount accordingly. Phase 2 if signal is good: detection with
+  a low-pass filter for the 50 Hz transformer field, masking while the
+  gate or relay is active (firmware knows both), re-baseline after each
+  gate move; direction from a second sensor (second I2C controller
+  avoids the fixed-address clash) via cross-correlation - sensors
+  30-40 cm apart inside the housing may suffice at gate-passage speeds,
+  else one sensor moves to a small plastic box down the fence (I2C over
+  cable: 10 kHz clock, 2.2k pull-ups, ground-paired ethernet wire, ~5 m
+  max). Known limits: differential count drifts on any missed passage,
+  so it needs an occasional re-sync (admin "set count" or a 3 a.m.
+  assume-all-home rule), and a car stopping over the sensor smears the
+  waveform, so detection needs settle/timeout logic, not edge counting.
+  Ties into the analytics section: passage waveforms are signatures,
+  and clustering them (car vs van, maybe individual regulars) is a
+  better-grounded unsupervised-learning target than the RF ideas
 - Reed switch for certain closed-position sensing
 - Battery-backed RTC (DS3231) - low priority now that browsers donate time
 - Buzzer chirp on trigger
