@@ -102,8 +102,7 @@ terminal at the bottom of the housing is never touched by this project.
 Order of work:
 
 1. **Prepare the buck converter first, on the bench** (LM2596-type, >=40 V
-   input - NOT a boost-type module like the XL6019, which can only step
-   voltage up): feed it 9-12 V, turn the trim pot until the output reads
+   input): feed it 9-12 V, turn the trim pot until the output reads
    **5.0 V**. Only a pre-adjusted converter goes to the gate.
 2. Robus **P.P. inner pin (+)** -> fuse 200 mA -> buck `IN+` (red).
 3. Robus **STOP inner pin (-)** -> buck `IN-` (black).
