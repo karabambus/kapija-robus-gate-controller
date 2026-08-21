@@ -1,6 +1,6 @@
 # Firmware
 
-PlatformIO project for the ESP32 controller. No external libraries — ESP32
+PlatformIO project for the ESP32 controller. No external libraries - ESP32
 Arduino core only.
 
 ## Layout
@@ -8,23 +8,27 @@ Arduino core only.
 ```
 platformio.ini            # board/framework config (esp32dev, Arduino, LittleFS)
 include/
-└── config.example.h      # template — copy to config.h (gitignored) and edit
+|-- config.example.h      # template - copy to config.h (gitignored) and edit
+|-- config_defaults.h     # back-compat defaults + compile-time checks for config.h
+`-- version.h             # FW_VERSION - bump when flashing, shown on the diag line
 src/
-├── main.cpp              # boot sequence, main loop, maintenance reboots
-├── net.*                 # WiFi modes (station/AP/dual), watchdog, identity
-├── gate_controller.*     # relay pulse + S.C.A. state (all GPIO access)
-├── auth.*                # per-tenant PIN login, RAM sessions
-├── login_backoff.*       # failed-login lockout policy (per-IP + global)
-├── access_log.*          # persistent log on LittleFS, rotation
-├── time_util.*           # NTP + local-time formatting (Europe/Zagreb)
-├── web_ui.*              # HTTP routes + HTML (Croatian UI, English toggle)
-└── web_update.*          # /update page: flash new firmware from a browser
+|-- main.cpp              # boot sequence, main loop, maintenance reboots
+|-- net.*                 # WiFi modes (station/AP/dual), watchdog, identity
+|-- gate_controller.*     # relay pulse + S.C.A. state (all GPIO access)
+|-- auth.*                # per-tenant PIN login, RAM sessions
+|-- login_backoff.*       # failed-login lockout policy (per-IP + global)
+|-- access_log.*          # persistent log on LittleFS, rotation
+|-- time_util.*           # NTP + local-time formatting (Europe/Zagreb)
+|-- web_ui.*              # HTTP routes + HTML (Croatian UI, English toggle)
+`-- web_update.*          # /update page: flash new firmware from a browser
+test/
+`-- test_backoff/         # host-side unit tests for the lockout policy
 ```
 
 ## Build & flash
 
 Prerequisite: [PlatformIO](https://platformio.org/) (VS Code extension or
-`pipx install platformio`). Wire the hardware first —
+`pipx install platformio`). Wire the hardware first -
 see [`../hardware/WIRING.md`](../hardware/WIRING.md).
 
 ```sh
@@ -39,12 +43,13 @@ Open `http://kapija.local` (or the printed IP) from a device on the same WiFi.
 
 ## OTA updates (flash over WiFi)
 
-After the first USB flash, the device accepts firmware over the network —
+After the first USB flash, the device accepts firmware over the network -
 no need to open the gate housing.
 
 ### Browser upload (easiest)
 
-1. `pio run` to build, which produces `.pio/build/esp32dev/firmware.bin`.
+1. Bump `FW_VERSION` in `include/version.h`, then `pio run` - the build
+   lands in `.pio/build/esp32dev/firmware.bin`.
 2. Browse to `http://kapija.local/update` (user `admin`, password =
    `OTA_PASSWORD` from `config.h`).
 3. Pick the `firmware.bin` and upload. The device flashes it (~15 s),
@@ -59,12 +64,12 @@ password escaping involved - this path avoids every espota pitfall below.
 
 1. In `platformio.ini`, uncomment the three `espota` lines; `--auth` must
    match `OTA_PASSWORD` from `config.h`.
-2. Be on the same network as the device, then `pio run -t upload` — it now
+2. Be on the same network as the device, then `pio run -t upload` - it now
    uploads over WiFi to `kapija.local` instead of a serial port.
 3. The device reboots into the new firmware; the access log and settings
    survive (they live in a separate flash partition).
 
-Fallback: USB flashing always keeps working — plug a cable into the board
+Fallback: USB flashing always keeps working - plug a cable into the board
 and comment the `espota` lines back out.
 
 ### OTA troubleshooting
@@ -72,9 +77,9 @@ and comment the `espota` lines back out.
 | Symptom | Cause / fix |
 |---|---|
 | `Authenticating...FAIL` although the password is right | `$` (and other metacharacters) in `OTA_PASSWORD` get mangled twice on the way to espota: PlatformIO's ini interpolation eats single `$`, and the shell then expands `$$` to its PID. Avoid `$`-type characters in OTA passwords, or bypass both layers by calling espota.py directly (below). |
-| `Authenticating...OK` then `No response from device` | Not the device — your computer's firewall. espota makes the ESP32 connect **back** to your machine on a TCP port. Pin the port with `-P 33333` and allow it in, e.g. `sudo ufw allow from 192.168.1.0/24 to any port 33333 proto tcp`. |
+| `Authenticating...OK` then `No response from device` | Not the device - your computer's firewall. espota makes the ESP32 connect **back** to your machine on a TCP port. Pin the port with `-P 33333` and allow it in, e.g. `sudo ufw allow from 192.168.1.0/24 to any port 33333 proto tcp`. |
 
-Direct espota call (no ini editing, password stays out of tracked files —
+Direct espota call (no ini editing, password stays out of tracked files -
 single quotes prevent shell mangling):
 
 ```sh
@@ -85,18 +90,25 @@ python3 ~/.platformio/packages/framework-arduinoespressif32/tools/espota.py \
 
 **Standalone AP builds** (`WIFI_AP_MODE true`): OTA still works. Join the
 ESP32's own WiFi network (`AP_SSID`) from the flashing computer and set
-`upload_port = 192.168.4.1` in `platformio.ini` — mDNS (`kapija.local`) may
+`upload_port = 192.168.4.1` in `platformio.ini` - mDNS (`kapija.local`) may
 not resolve on the AP network, the IP always works.
 
 ## Configuration notes
 
-- `WIFI_AP_MODE` — `false` (default) joins the home WiFi; `true` makes the
+- Default network mode (station): with both `WIFI_AP_MODE` and
+  `WIFI_DUAL_MODE` at `false`, the device joins the home WiFi
+  (`WIFI_SSID`/`WIFI_PASS`) and is reachable at `http://kapija.local`
+  (`HOSTNAME` via mDNS) or its DHCP IP. NTP gives log entries real
+  timestamps, and a maintenance reboot runs daily at `DAILY_REBOOT_HOUR`
+  (4 a.m.). A connection watchdog reboots the device if WiFi stays down
+  for 60 s - short DHCP or router hiccups self-heal without one.
+- `WIFI_AP_MODE` - `false` (default) joins the home WiFi; `true` makes the
   ESP32 broadcast its own network instead (`AP_SSID`/`AP_PASS`, WPA2, phones
   browse to `http://192.168.4.1`). On the AP network there is no internet:
   connected phones drop offline for the duration, and no NTP means log
-  entries show "—" instead of a date (the device reboots on a 48 h uptime
-  cadence instead of the 4 a.m. schedule).
-- `WIFI_DUAL_MODE` — join the home WiFi AND broadcast the own AP at the same
+  entries show a dash placeholder instead of a date (the device reboots
+  on a 48 h uptime cadence instead of the 4 a.m. schedule).
+- `WIFI_DUAL_MODE` - join the home WiFi AND broadcast the own AP at the same
   time. The AP is a fallback control path for when the router is down: phones
   join it and browse to `http://192.168.4.1`. NTP, mDNS and OTA keep working
   through the router side; when the router is unreachable the device does not
@@ -105,8 +117,15 @@ not resolve on the AP network, the IP always works.
   a router channel change gives AP clients a few-second blip before they
   rejoin on their own (set a fixed channel in the router to avoid even that).
 
-- `RELAY_ACTIVE_HIGH` — if the relay clicks ON at boot and releases after,
+- `REQUIRE_LOGIN` - `true` (default) shows the PIN login page, with one
+  PIN per tenant from the `TENANTS` table (names appear in the access
+  log). Set to `false` for passwordless mode: no login page, WiFi
+  security alone gates access, and anyone on the network can operate
+  the gate and read the log (entries then record only the caller's IP,
+  no name). `TENANTS` may be omitted in that case; the `/update` page
+  keeps its own `OTA_PASSWORD` either way.
+- `RELAY_ACTIVE_HIGH` - if the relay clicks ON at boot and releases after,
   flip this to `false`.
-- `SCA_OPEN_IS_LOW` — standard wiring pulls the GPIO low when the gate is
+- `SCA_OPEN_IS_LOW` - standard wiring pulls the GPIO low when the gate is
   open; flip only if your opto wiring inverts it.
 - Session tokens live in RAM: a reboot logs all users out (by design).
