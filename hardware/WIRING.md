@@ -60,12 +60,13 @@ Bench acceptance: relay stays silent at boot, web button produces one clean
 entries appear in the log and survive a power cycle. Firmware flashing:
 see [`../firmware/README.md`](../firmware/README.md).
 
-## Alternative build: no perfboard ("flying" harness)
+## Final build: the "flying" harness (no perfboard)
 
-The circuit is small enough to build without a board: modules connect via
-female Dupont ends, the PC817 is wired dead-bug style, junctions live in a
-screw terminal strip (luster clema). Electrically identical to the perfboard
-build - same net-list, same install diagram.
+This is the build as installed. The circuit is small enough to need no
+board: modules connect via female Dupont ends, the PC817 is wired
+dead-bug style, junctions live in a screw terminal strip (luster clema).
+A soldered perfboard build would be electrically identical - same
+net-list, same install diagram - if you prefer one.
 
 Harness (label every wire end with a masking-tape flag):
 
