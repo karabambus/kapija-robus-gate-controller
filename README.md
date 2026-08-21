@@ -37,13 +37,15 @@ The state handling mirrors the real Robus step-by-step sequence:
 - Gate state from the drive itself: the Robus S.C.A. output is read through
   an optocoupler, settle-filtered so the travel blinking never flickers the
   display.
-- Persistent access log (timestamp, action, client IP) that survives
-  reboots, plus a boot entry with firmware version and reset cause
-  (power-on / watchdog / brownout / ...) so you always know what the device
-  has been doing.
-- Optional shared-password login (`REQUIRE_LOGIN`) with brute-force lockout,
-  or passwordless operation for a trusted WiFi. CSRF origin checks guard the
-  trigger endpoint either way.
+- Persistent access log (timestamp, action, client IP - and the tenant's
+  name when login is on) that survives reboots, plus a boot entry with
+  firmware version and reset cause (power-on / watchdog / brownout / ...)
+  so you always know what the device has been doing.
+- Optional login (`REQUIRE_LOGIN`): each tenant gets their own 4-digit PIN,
+  entered on a numeric keypad, so log entries carry names and any tenant can
+  be revoked individually. Failed attempts hit a per-IP lockout with
+  escalating backoff plus a global backstop. Or run passwordless on a
+  trusted WiFi - CSRF origin checks guard the trigger endpoint either way.
 - Three WiFi modes: join the home network (default), broadcast a standalone
   WPA2 access point (`WIFI_AP_MODE`) for sites with no router in range, or
   dual mode (`WIFI_DUAL_MODE`) doing both at once - the ESP32's own network
@@ -96,7 +98,8 @@ One spec is critical: the Robus "24 V" accessory tap actually measures
 3. Wire per [hardware/WIRING.md](hardware/WIRING.md). Bench-adjust the buck
    converter to 5.0 V **before** connecting the ESP32.
 4. `cp firmware/include/config.example.h firmware/include/config.h` and fill
-   in WiFi credentials, passwords, pins, and your measured travel times.
+   in WiFi credentials, tenant PINs, GPIO pins, and your measured travel
+   times.
 5. Build and flash: `pio run -t upload` over USB the first time; later
    builds upload over WiFi from the browser `/update` page - see
    [firmware/README.md](firmware/README.md), including the OTA
@@ -109,10 +112,11 @@ One spec is critical: the Robus "24 V" accessory tap actually measures
 
 Deliberately LAN-only: the web server must never be exposed to the internet
 (no port forwarding). On the local network, access is protected by the WiFi
-password, optionally a shared app password (`REQUIRE_LOGIN`), a brute-force
-lockout, and an Origin check that stops cross-site and DNS-rebinding tricks
-from triggering the gate. Firmware flashing (`/update` and espota) has its
-own separate password.
+password, optionally per-tenant PIN login (`REQUIRE_LOGIN`) with per-IP
+lockout and escalating backoff on failed attempts, and an Origin check that
+stops cross-site and DNS-rebinding tricks from triggering the gate. Logins,
+gate actions and lockout events are all logged with the caller's identity.
+Firmware flashing (`/update` and espota) has its own separate password.
 
 ## Repository layout
 

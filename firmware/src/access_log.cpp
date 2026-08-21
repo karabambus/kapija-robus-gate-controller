@@ -37,14 +37,21 @@ String lineToRow(const String& line) {
   if (b < 0) return "";
   long epoch = line.substring(0, a).toInt();
   String action = line.substring(a + 1, b);
-  String ip = line.substring(b + 1);
+  // Optional 4th field (tenant name, since v1.10); pre-PIN 3-field lines
+  // simply have no name and render as before.
+  int c = line.indexOf(';', b + 1);
+  String ip = c < 0 ? line.substring(b + 1) : line.substring(b + 1, c);
+  String name = c < 0 ? "" : line.substring(c + 1);
+  String who = name.length()
+                   ? "<td>" + escapeHtml(name) + "<div class=muted>" +
+                         escapeHtml(ip) + "</div></td>"
+                   : "<td class=muted>" + escapeHtml(ip) + "</td>";
   // data-act carries the stored action key so the page can translate it
   // client-side without rewriting old log entries. Quoted + escaped so file
   // content can never escape the attribute.
   return "<tr><td>" + timeutil::formatEpoch(epoch) +
          "</td><td><span data-act=\"" + escapeHtml(action) + "\">" +
-         escapeHtml(action) + "</span></td><td class=muted>" + escapeHtml(ip) +
-         "</td></tr>";
+         escapeHtml(action) + "</span></td>" + who + "</tr>";
 }
 
 // Feed one file's lines, oldest-first, into a ring of the newest kMaxRows.
@@ -60,11 +67,15 @@ void collectLines(const char* path, std::vector<String>& ring, size_t& total) {
 }
 }  // namespace
 
-void append(const char* action, const String& clientIp) {
+void append(const char* action, const String& clientIp, const char* tenant) {
   File f = LittleFS.open(kLogFile, "a");
   if (!f) return;
   long epoch = timeutil::synced() ? (long)time(nullptr) : 0;
-  f.printf("%ld;%s;%s\n", epoch, action, clientIp.c_str());
+  if (tenant && *tenant) {
+    f.printf("%ld;%s;%s;%s\n", epoch, action, clientIp.c_str(), tenant);
+  } else {
+    f.printf("%ld;%s;%s\n", epoch, action, clientIp.c_str());
+  }
   size_t size = f.size();
   f.close();
   if (size > kRotateBytes) {

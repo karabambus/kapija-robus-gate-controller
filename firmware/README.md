@@ -13,7 +13,8 @@ src/
 ├── main.cpp              # boot sequence, main loop, maintenance reboots
 ├── net.*                 # WiFi modes (station/AP/dual), watchdog, identity
 ├── gate_controller.*     # relay pulse + S.C.A. state (all GPIO access)
-├── auth.*                # shared-password login, RAM sessions, lockout
+├── auth.*                # per-tenant PIN login, RAM sessions
+├── login_backoff.*       # failed-login lockout policy (per-IP + global)
 ├── access_log.*          # persistent log on LittleFS, rotation
 ├── time_util.*           # NTP + local-time formatting (Europe/Zagreb)
 ├── web_ui.*              # HTTP routes + HTML (Croatian UI, English toggle)
@@ -27,10 +28,11 @@ Prerequisite: [PlatformIO](https://platformio.org/) (VS Code extension or
 see [`../hardware/WIRING.md`](../hardware/WIRING.md).
 
 ```sh
-cp include/config.example.h include/config.h   # then edit: WiFi, password, pins
+cp include/config.example.h include/config.h   # then edit: WiFi, tenant PINs, pins
 pio run                # compile
 pio run -t upload      # flash over micro-USB (data cable)
 pio device monitor     # serial console @115200, prints the IP after boot
+pio test -e native     # host-side unit tests (no hardware needed)
 ```
 
 Open `http://kapija.local` (or the printed IP) from a device on the same WiFi.

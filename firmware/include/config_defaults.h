@@ -13,6 +13,33 @@
 static_assert(REQUIRE_LOGIN == true || REQUIRE_LOGIN == false,
               "REQUIRE_LOGIN must be true or false (unquoted)");
 
+#if REQUIRE_LOGIN && !defined(TENANTS)
+#error \
+    "v1.10+: login uses per-tenant PINs. Define a TENANTS table in include/config.h (see include/config.example.h). SHARED_PASSWORD is no longer used."
+#endif
+
+// Failed-login backoff (v1.10) — defaults for older config.h files.
+// Per-IP: N fails lock that IP for the base time, doubling per re-lock up to
+// the cap. Global backstop counts fails from ALL IPs together.
+#ifndef LOGIN_IP_MAX_FAILS
+#define LOGIN_IP_MAX_FAILS 3
+#endif
+#ifndef LOGIN_IP_LOCK_BASE_MS
+#define LOGIN_IP_LOCK_BASE_MS 30000UL
+#endif
+#ifndef LOGIN_IP_LOCK_MAX_MS
+#define LOGIN_IP_LOCK_MAX_MS 900000UL
+#endif
+#ifndef LOGIN_GLOBAL_MAX_FAILS
+#define LOGIN_GLOBAL_MAX_FAILS 10
+#endif
+#ifndef LOGIN_GLOBAL_LOCK_BASE_MS
+#define LOGIN_GLOBAL_LOCK_BASE_MS 120000UL
+#endif
+#ifndef LOGIN_GLOBAL_LOCK_MAX_MS
+#define LOGIN_GLOBAL_LOCK_MAX_MS 3600000UL
+#endif
+
 #ifndef WIFI_AP_MODE
 #define WIFI_AP_MODE false
 #endif

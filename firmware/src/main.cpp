@@ -18,6 +18,7 @@
 #include <time.h>
 
 #include "access_log.h"
+#include "auth.h"
 #include "config_defaults.h"
 #include "gate_controller.h"
 #include "net.h"
@@ -53,6 +54,7 @@ const char* resetReasonStr() {
 void setup() {
   gate::begin();  // first: relay pin must settle to inactive immediately
   Serial.begin(115200);
+  auth::begin();  // validate the TENANTS table (warnings go to serial)
 
   if (!LittleFS.begin(true)) {  // true = format on first mount
     Serial.println("LittleFS mount failed");

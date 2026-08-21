@@ -48,8 +48,11 @@ const char kCss[] =
     "button:disabled{background:#9e9b93!important;color:#f5f3ee;"
     "box-shadow:none;transform:translateY(6px)}"
     ".low{min-height:56px;font-size:16px}"
-    "input[type=password]{width:100%;box-sizing:border-box;font-size:18px;"
-    "padding:12px;border:2px solid #1a1a1a;border-radius:4px;background:#fff}"
+    ".pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;"
+    "margin:0 0 10px}"
+    ".pad .key{min-height:64px;margin:0;font-size:26px}"
+    "#dots{font-size:30px;letter-spacing:.35em;text-align:center;"
+    "margin:0 0 14px}"
     ".err{color:#b3261e;font-weight:700}"
     "a{color:#1a1a1a}"
     ".links{font-size:12px;text-transform:uppercase;letter-spacing:.1em;"
@@ -71,22 +74,24 @@ const char kI18nJs[] =
     "const L={hr:{state:'Stanje',load:'učitavam…',open:'OTVORENA',"
     "closed:'ZATVORENA',btn:'OTVORI / ZATVORI',log:'Dnevnik otvaranja',"
     "out:'Odjava',logtitle:'Dnevnik',time:'Vrijeme',action:'Akcija',"
-    "empty:'Još nema zapisa.',back:'← Natrag',pw:'Lozinka',login:'Prijava',"
-    "wrong:'Pogrešna lozinka.',sw:'EN',older:'stariji zapisi nisu prikazani',"
+    "empty:'Još nema zapisa.',back:'← Natrag',pinlbl:'Unesi PIN',"
+    "wrongpin:'Pogrešan PIN.',locked:'Previše pokušaja, pričekaj.',"
+    "who:'Tko',sw:'EN',older:'stariji zapisi nisu prikazani',"
     "moving:'U POKRETU',partial:'DJELOMIČNO OTVORENA',"
     "wait:'Pričekaj…',err403:'Zahtjev odbijen',"
     "errnet:'Nema veze s uređajem',"
     "a_prijava:'prijava',a_otvaranje:'otvaranje',a_zatvaranje:'zatvaranje',"
-    "a_start:'pokretanje',a_stop:'stop'},"
+    "a_start:'pokretanje',a_stop:'stop',a_blokada:'blokada'},"
     "en:{state:'Status',load:'loading…',open:'OPEN',closed:'CLOSED',"
     "btn:'OPEN / CLOSE',log:'Access log',out:'Log out',logtitle:'Log',"
     "time:'Time',action:'Action',empty:'No entries yet.',back:'← Back',"
-    "pw:'Password',login:'Log in',wrong:'Wrong password.',sw:'HR',"
+    "pinlbl:'Enter PIN',wrongpin:'Wrong PIN.',"
+    "locked:'Too many attempts, wait.',who:'Who',sw:'HR',"
     "older:'older entries not shown',moving:'MOVING',partial:'PARTLY OPEN',"
     "wait:'Wait…',err403:'Request rejected',errnet:'No connection to device',"
     "a_prijava:'login',"
     "a_otvaranje:'opening',a_zatvaranje:'closing',a_start:'startup',"
-    "a_stop:'stop'}};"
+    "a_stop:'stop',a_blokada:'lockout'}};"
     "let lang=localStorage.getItem('lang')||'hr';"
     "if(!L[lang])lang='hr';"  // foreign value on a shared origin (192.168.4.1)
     "function t(k){return L[lang][k]}"
@@ -103,7 +108,19 @@ const char kI18nJs[] =
 bool authed() {
   if (!REQUIRE_LOGIN) return true;
   return srv->hasHeader("Cookie") &&
-         auth::checkCookieHeader(srv->header("Cookie"));
+         auth::sessionTenant(srv->header("Cookie")) >= 0;
+}
+
+// Tenant name of the request's session, for log attribution; nullptr when
+// there is none (login off, or no valid session).
+const char* sessionName() {
+#if REQUIRE_LOGIN
+  if (srv->hasHeader("Cookie")) {
+    int t = auth::sessionTenant(srv->header("Cookie"));
+    if (t >= 0) return auth::tenantName(t);
+  }
+#endif
+  return nullptr;
 }
 
 // CSRF guard for state-changing requests. Browsers send an Origin header on
@@ -117,18 +134,59 @@ bool originAllowed() {
   return net::isOwnOrigin(srv->header("Origin"));
 }
 
-void sendLoginPage(bool wrongPassword) {
+// Numeric keypad: 4-digit PIN, masked dot display, auto-submit on the 4th
+// digit. Wrong-PIN / lockout feedback comes back over fetch, so the page
+// itself is stateless.
+void sendLoginPage() {
   String h = kPageHead;
   h += "<title>Kapija</title>";
   h += kCss;
-  h += "<h1>KAPIJA</h1><div class=card><form method=POST action=/login>";
-  if (wrongPassword) h += "<p class=err data-i=wrong></p>";
-  h += "<p><input type=password name=pw data-ph=pw autofocus></p>"
-       "<p><button class=low data-i=login></button></p></form>"
+  h += "<h1>KAPIJA</h1><div class=card>"
+       "<p class=lbl data-i=pinlbl></p>"
+       "<div id=dots></div>"
+       "<p class=err id=msg></p>"
+       "<div class=pad>"
+       "<button class=key onclick=key('1')>1</button>"
+       "<button class=key onclick=key('2')>2</button>"
+       "<button class=key onclick=key('3')>3</button>"
+       "<button class=key onclick=key('4')>4</button>"
+       "<button class=key onclick=key('5')>5</button>"
+       "<button class=key onclick=key('6')>6</button>"
+       "<button class=key onclick=key('7')>7</button>"
+       "<button class=key onclick=key('8')>8</button>"
+       "<button class=key onclick=key('9')>9</button>"
+       "<button class=key onclick=clr()>C</button>"
+       "<button class=key onclick=key('0')>0</button>"
+       "<button class=key onclick=del()>&#9003;</button>"
+       "</div>"
        "<p class=links><a href=# data-i=sw onclick='swLang();return false'></a>"
        "</p></div>";
   h += kI18nJs;
-  h += "<script>applyLang()</script>";
+  h +=
+      "<script>"
+      "let buf='';"
+      "function upd(){let d='';"
+      "for(let i=0;i<4;i++)d+=i<buf.length?'\\u25cf':'\\u25cb';"
+      "document.getElementById('dots').textContent=d}"
+      "function ena(on){document.querySelectorAll('.key')"
+      ".forEach(b=>b.disabled=!on)}"
+      "function msg(x){document.getElementById('msg').textContent=x}"
+      "function key(d){if(buf.length>=4)return;msg('');buf+=d;upd();"
+      "if(buf.length==4)sub()}"
+      "function clr(){buf='';msg('');upd()}"
+      "function del(){buf=buf.slice(0,-1);upd()}"
+      "async function sub(){ena(false);"
+      "try{let r=await fetch('/login',{method:'POST',"
+      "headers:{'Content-Type':'application/x-www-form-urlencoded'},"
+      "body:'pin='+buf});"
+      "if(r.status==204){location='/';return}"
+      "if(r.status==429){let ra=r.headers.get('Retry-After');"
+      "msg(t('locked')+(ra?' ('+ra+' s)':''))}"
+      "else msg(t('wrongpin'))}"
+      "catch(e){msg(t('errnet'))}"
+      "buf='';upd();ena(true)}"
+      "applyLang();upd();"
+      "</script>";
   srv->send(200, "text/html", h);
 }
 
@@ -198,7 +256,7 @@ void sendMainPage() {
 
 void handleRoot() {
   if (!authed()) {
-    sendLoginPage(false);
+    sendLoginPage();
     return;
   }
   sendMainPage();
@@ -206,29 +264,36 @@ void handleRoot() {
 
 void handleLogin() {
   // Same CSRF guard as /toggle: without it a cross-site form POST could
-  // brute-force the password or trip the global lockout for every tenant.
+  // brute-force PINs or trip the lockouts for every tenant.
   if (!originAllowed()) {
     srv->send(403, "text/plain", "forbidden");
     return;
   }
-  if (auth::lockedOut()) {
+  uint32_t ip = (uint32_t)srv->client().remoteIP();
+  if (auth::lockedOut(ip)) {
+    srv->sendHeader("Retry-After", String(auth::lockRemainSec(ip)));
     srv->send(429, "text/plain",
-              "Previše pokušaja, pričekaj minutu. / "
-              "Too many attempts, wait a minute.");
+              "Previše pokušaja, pričekaj. / Too many attempts, wait.");
     return;
   }
-  if (auth::tryPassword(srv->arg("pw"))) {
-    String token = auth::createSession();
+  int tenant = auth::tryPin(srv->arg("pin"), ip);
+  if (tenant >= 0) {
+    String token = auth::createSession(tenant);
     // SameSite=Lax: defense-in-depth on top of the Origin check — the cookie
     // never rides along on cross-site POSTs in the first place.
     srv->sendHeader("Set-Cookie",
                     "sess=" + token +
                         "; HttpOnly; Max-Age=31536000; Path=/; SameSite=Lax");
-    srv->sendHeader("Location", "/");
-    srv->send(303);
-    accesslog::append("prijava", srv->client().remoteIP().toString());
+    srv->send(204);
+    accesslog::append("prijava", srv->client().remoteIP().toString(),
+                      auth::tenantName(tenant));
   } else {
-    sendLoginPage(true);
+    // One row per lock event (not per attempt) keeps log growth bounded
+    // while still making a brute-force run visible.
+    if (auth::takeLockoutEvent()) {
+      accesslog::append("blokada", srv->client().remoteIP().toString());
+    }
+    srv->send(401, "text/plain", "wrong pin");
   }
 }
 
@@ -239,6 +304,9 @@ void handleLogout() {
     srv->send(403, "text/plain", "forbidden");
     return;
   }
+  // Kill the session server-side too — the token must not stay usable until
+  // ring eviction if the cookie was ever captured.
+  if (srv->hasHeader("Cookie")) auth::destroySession(srv->header("Cookie"));
   srv->sendHeader("Set-Cookie",
                   "sess=x; Max-Age=0; Path=/; SameSite=Lax");
   srv->sendHeader("Location", "/");
@@ -262,7 +330,8 @@ void handleToggle() {
                        : gate::isOpen() ? "zatvaranje"
                                         : "otvaranje";
   if (gate::trigger()) {
-    accesslog::append(action, srv->client().remoteIP().toString());
+    accesslog::append(action, srv->client().remoteIP().toString(),
+                      sessionName());
     srv->send(200, "text/plain", "ok");
   } else {
     srv->send(200, "text/plain", "cooldown");
@@ -317,7 +386,7 @@ void handleLog() {
   h += kCss;
   h += "<h1><span data-i=logtitle></span></h1><div class=card><table>"
        "<tr><td><b data-i=time></b></td><td><b data-i=action></b></td>"
-       "<td><b>IP</b></td></tr>";
+       "<td><b data-i=who></b></td></tr>";
   h += rows.length() ? rows
                      : "<tr><td colspan=3 class=muted data-i=empty></td></tr>";
   h += "</table><p class=links><a href=/ data-i=back></a> · "

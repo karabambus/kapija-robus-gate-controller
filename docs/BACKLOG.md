@@ -4,15 +4,12 @@ Planned improvements, in rough priority order. No dates promised.
 
 ## App
 
-- Login rework: per-tenant 4-digit PINs (0-9) entered on a numeric
-  keypad UI, with a named access log and individual revocation. 4
-  digits is only 10000 combinations, so it must land together with
-  lockout/backoff on failed attempts (the per-IP rate limit below
-  covers part of this)
-- Admin role: mark one PIN (or a flag on a PIN) as admin. Today there
-  is only a shared password, but gate lock mode and log clearing need
-  an admin/tenant distinction to exist first
-- Per-IP rate limit on the trigger endpoint
+- Admin role: mark one PIN (or a flag on a PIN) as admin. Per-tenant
+  PINs exist now, so this is just a flag on a TENANTS entry plus
+  admin-only routes; gate lock mode and log clearing need it first
+- Per-IP rate limit on the trigger endpoint (the login endpoint already
+  has per-IP lockout with backoff; this item is about throttling
+  authenticated /toggle spam, which is a different concern)
 - Log download: authenticated endpoint serving log.old + log.txt
   combined as one CSV file (this is also the collection path for the
   analytics section below)
@@ -34,19 +31,14 @@ Planned improvements, in rough priority order. No dates promised.
   my phone" complaint
 - WiFi signal strength (RSSI) in the /status diag line: real data for
   deciding whether the external-antenna hardware item is ever needed
-- Named devices in the access log: small config table mapping known IPs
-  (DHCP reservations) to labels, so rows read "Marin's phone" instead
-  of an address. Stopgap only: the login rework above makes this
-  obsolete, so build it only if that stays far off, and drop it once
-  per-tenant PINs land
 
 ## Analytics (unsupervised learning on the access log)
 
 - User profiling by clustering: group trigger events into per-user usage
   profiles (time of day, day of week, frequency, device/browser) from
   access-log data. Could spot an unknown or misused PIN when an event
-  falls far outside every known cluster. Depends on the login rework
-  (per-tenant PINs, named log) landing first.
+  falls far outside every known cluster. The per-tenant PINs and named
+  log it depends on exist now.
   Device/browser feature: log a short token parsed from the User-Agent
   header at request time (e.g. android-chrome, ios-safari, desktop).
   Raw UA strings are 100+ bytes and would rotate the log too fast;

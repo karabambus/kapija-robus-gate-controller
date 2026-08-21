@@ -36,10 +36,31 @@
 // (entries still record the caller's IP). OTA flashing keeps its own password.
 #define REQUIRE_LOGIN true
 
-// Shared tenant password for the web UI (v1; per-tenant PINs planned for v2).
-// Unused when REQUIRE_LOGIN is false (the login routes are not registered),
-// but must stay defined — the auth module references it in every build.
-#define SHARED_PASSWORD "change-me"
+// --- Tenants (per-tenant 4-digit PINs) ---
+// One X(...) line per tenant: display name (shown in the access log) and a
+// PIN of exactly 4 digits, both quoted. Rules:
+//   - PINs must be unique (checked at boot; a duplicate entry is disabled
+//     with a serial warning so the log can never name the wrong tenant)
+//   - names: keep short, no ';' or line breaks (log line format)
+//   - avoid guessable PINs: 0000, 1234, 2580, birth years
+// Revocation: delete the tenant's line, rebuild, reflash via the browser
+// /update page. A reflash/reboot also ends all existing sessions.
+// Only required when REQUIRE_LOGIN is true; may be omitted otherwise.
+#define TENANTS(X) \
+  X("Marin", "4711") \
+  X("Stan 1", "8024") \
+  X("Stan 2", "3390")
+
+// Failed-login backoff (optional; defaults shown, see config_defaults.h).
+// Per-IP: 3 fails lock that IP 30 s, doubling per repeat up to 15 min.
+// Global backstop (all IPs together): 10 fails lock login for everyone
+// 2 min, doubling up to 60 min.
+//#define LOGIN_IP_MAX_FAILS 3
+//#define LOGIN_IP_LOCK_BASE_MS 30000
+//#define LOGIN_IP_LOCK_MAX_MS 900000
+//#define LOGIN_GLOBAL_MAX_FAILS 10
+//#define LOGIN_GLOBAL_LOCK_BASE_MS 120000
+//#define LOGIN_GLOBAL_LOCK_MAX_MS 3600000
 
 // mDNS hostname -> http://kapija.local
 #define HOSTNAME "kapija"
@@ -73,8 +94,6 @@
 #define TRAVEL_OPEN_MS 34000
 #define TRAVEL_CLOSE_MS 31000
 #define SESSION_MAX 6             // concurrent authenticated sessions kept in RAM
-#define LOGIN_MAX_FAILS 5         // failed logins before lockout kicks in
-#define LOGIN_LOCKOUT_MS 60000    // lockout duration after too many failures
 
 // Timezone: Croatia (CET/CEST with DST rules)
 #define TZ_INFO "CET-1CEST,M3.5.0,M10.5.0/3"
