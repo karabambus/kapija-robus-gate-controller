@@ -42,12 +42,6 @@ The 680 ohm LED resistor sits on the cathode side here; either side of the LED
 works - it must exist **exactly once** in that loop (470 ohm-1 kohm all fine,
 never zero, never twice).
 
-PC817 orientation: hold the chip with its text readable and the **dot top-left
-= pin 1 (anode)**. Then: 1-A top-left, 2-K bottom-left, **3-E bottom-right,
-4-C top-right** (pins number counter-clockwise - 3 and 4 sit diagonally from
-1 and 2). Both diagrams draw the chip in this real physical orientation. The
-chip must straddle the breadboard's center groove.
-
 Checklist before plugging in USB:
 
 - [ ] No wire runs between `VIN` and `GND` directly (visual short check)
