@@ -23,43 +23,49 @@ Planned improvements, in rough priority order. No dates promised.
 
 ## App
 
-- Per-tenant PINs with a named access log (individual revocation)
-- Simple numeric login: replace the password with a 4-digit PIN (0-9)
-  and a numeric keypad UI on the login page. Only 10000 combinations,
-  so it must land together with lockout/backoff on failed attempts
-  (the per-IP rate limit item below covers part of this)
-- Home-screen app feel: web manifest + icon, vibration on press
-- Faster status polling right after a trigger
-- "Gate open too long" warning banner
+- Login rework: per-tenant 4-digit PINs (0-9) entered on a numeric
+  keypad UI, with a named access log and individual revocation. 4
+  digits is only 10000 combinations, so it must land together with
+  lockout/backoff on failed attempts (the per-IP rate limit below
+  covers part of this)
+- Admin role: mark one PIN (or a flag on a PIN) as admin. Today there
+  is only a shared password, but gate lock mode and log clearing need
+  an admin/tenant distinction to exist first
 - Per-IP rate limit on the trigger endpoint
-- CSV export of the access log
+- Log download: authenticated endpoint serving log.old + log.txt
+  combined as one CSV file (this is also the collection path for the
+  analytics section below)
 - Gate lock mode: admin toggle that makes the ESP ignore web triggers
   (night hours, vacation), optionally on a schedule. RF remotes keep
-  working, which is the right failsafe
-- Show elapsed open time ("open for N min") while the gate stands open;
-  pairs with the open-too-long warning banner above
-- Named devices in the access log: small config table mapping known IPs
-  (DHCP reservations) to labels, so rows read "Marin's phone" instead of
-  an address. Poor man's identity before per-tenant PINs land, and a
-  useful feature for the clustering items below
-- Event webhook: POST every log event to a configurable home-server URL.
-  Doubles as the automated-collection transport for the analytics
-  section and as the delivery path for future notifications (ntfy
-  accepts plain POSTs)
+  working, which is the right failsafe. Needs the admin role above
+- Open-time display: show elapsed open time ("open for N min") while
+  the gate stands open; past a configurable threshold it escalates to
+  a "gate open too long" warning banner
+- Event webhook: POST every log event to a configurable URL. Doubles
+  as the automated-collection transport for the analytics section and
+  as the delivery path for future notifications (ntfy accepts plain
+  POSTs)
+- Home-screen app feel: web manifest + icon, vibration on press
+- Faster status polling right after a trigger
 - Android name-resolution fallback: kapija.local via mDNS is flaky in
   Android browsers. A printed QR code with the static IP, or an
   LLMNR/NetBIOS responder, removes the most likely "does not work on
   my phone" complaint
 - WiFi signal strength (RSSI) in the /status diag line: real data for
   deciding whether the external-antenna hardware item is ever needed
+- Named devices in the access log: small config table mapping known IPs
+  (DHCP reservations) to labels, so rows read "Marin's phone" instead
+  of an address. Stopgap only: the login rework above makes this
+  obsolete, so build it only if that stays far off, and drop it once
+  per-tenant PINs land
 
 ## Analytics (unsupervised learning on the access log)
 
 - User profiling by clustering: group trigger events into per-user usage
   profiles (time of day, day of week, frequency, device/browser) from
   access-log data. Could spot an unknown or misused PIN when an event
-  falls far outside every known cluster. Depends on per-tenant PINs and
-  the named access log landing first.
+  falls far outside every known cluster. Depends on the login rework
+  (per-tenant PINs, named log) landing first.
   Device/browser feature: log a short token parsed from the User-Agent
   header at request time (e.g. android-chrome, ios-safari, desktop).
   Raw UA strings are 100+ bytes and would rotate the log too fast;
@@ -75,10 +81,11 @@ Planned improvements, in rough priority order. No dates promised.
 
 Supporting infrastructure the above needs:
 
-- Log download from the device: authenticated endpoint serving log.old +
-  log.txt combined as one file (extends the CSV export item under App)
-- Log clearing: admin-only clear button, plus a retention cap so the
-  filesystem never fills regardless of manual clearing
+- Log download from the device: covered by the log download item under
+  App
+- Log clearing: clear button (needs the admin role under App), plus a
+  retention cap so the filesystem never fills regardless of manual
+  clearing
 - Aggregates that survive log clearing: keep a small fixed-size summary
   per user (e.g. trigger counts per hour-of-week bucket, per device
   token) updated on every trigger and stored separately from the raw
@@ -93,9 +100,12 @@ Supporting infrastructure the above needs:
 - Automated collection: something periodically pulls the log off the
   device (home-server cron or phone shortcut hitting the download
   endpoint), so analysis does not depend on remembering manual exports
-- Notification channel groundwork: the ESP cannot do web push itself
-  (needs HTTPS and a push service), so pattern-based phone alerts
-  likely go through a relay such as a self-hosted or public ntfy topic
+- Notification channel groundwork: browser web push proper is out of
+  reach (it needs VAPID crypto and subscription management, not just
+  HTTPS), but the ESP32 can POST over TLS with core libs
+  (WiFiClientSecure/HTTPClient), so pattern-based phone alerts can go
+  straight to a self-hosted or public ntfy topic - no home server
+  required
 
 ## Code and project maintenance
 
@@ -118,8 +128,18 @@ Supporting infrastructure the above needs:
 
 ## Drive features (Nice Robus board settings)
 
-- Auto-close (board function L1) with pause time
-- Condominium step-by-step mode (L2): commands during opening are ignored
+- Auto-close (board function L1) with pause time. Caveat: an unattended
+  auto-close looks to the ESP exactly like an RF-remote move, so every
+  one would be logged as "daljinski". The log needs a distinct source
+  for it (a close starting with no trigger shortly after a full open is
+  almost certainly auto-close), and L1 makes the open-too-long banner
+  mostly moot
+- Condominium step-by-step mode (L2): commands during opening are
+  ignored. Warning: this invalidates the field-learned state machine -
+  press-while-opening no longer stops, so the stop/PARTLY OPEN handling
+  and the reverse-time estimate are all wrong under L2. The gate
+  controller and the documented app behavior need rework before ever
+  enabling it
 
 ## Hardware (needs a site visit)
 
