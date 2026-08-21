@@ -2,25 +2,6 @@
 
 Planned improvements, in rough priority order. No dates promised.
 
-## Near-term patches (small fixes found in code review)
-
-- First trigger after boot is refused: lastTriggerMs starts at 0, so the
-  cooldown check treats a fresh boot as "just triggered" for the first
-  TRIGGER_COOLDOWN_MS of uptime. Init to the negative cooldown or
-  special-case zero
-- /logout has no CSRF guard: it is a plain GET with no Origin check, so
-  any page a tenant visits could log every session out. Make it POST
-  with the same originAllowed() check as /toggle
-- Add SameSite=Lax to the session cookie: free defense-in-depth on top
-  of the Origin check
-- Make travel-deadline comparisons millis()-rollover safe: direct
-  "millis() >= movingUntilMs" breaks at the 49-day wrap. The daily
-  reboot masks it, but the unsynced/AP build only reboots on a 48 h
-  cadence; use subtraction-style comparisons
-- Sanity-bound /time clock donations: reject client timestamps before
-  the firmware build date or absurdly far in the future, so one phone
-  with a wrong clock cannot poison log timestamps in AP mode
-
 ## App
 
 - Login rework: per-tenant 4-digit PINs (0-9) entered on a numeric

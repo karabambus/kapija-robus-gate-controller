@@ -10,6 +10,22 @@ namespace timeutil {
 namespace {
 // Any epoch after ~Nov 2023 means SNTP has run; the RTC boots at 1970.
 constexpr time_t kSyncThreshold = 1700000000;
+
+// Compile time as an epoch, parsed once from __DATE__/__TIME__
+// ("Aug 21 2026" / "12:34:56"). mktime reads it in the device TZ rather than
+// the build machine's — hours of skew at most, fine for a plausibility floor.
+time_t buildEpoch() {
+  static time_t cached = 0;
+  if (cached == 0) {
+    struct tm tm = {};
+    tm.tm_isdst = -1;
+    if (strptime(__DATE__ " " __TIME__, "%b %d %Y %H:%M:%S", &tm)) {
+      cached = mktime(&tm);
+    }
+    if (cached <= 0) cached = kSyncThreshold;  // parse failed: old floor
+  }
+  return cached;
+}
 }
 
 void begin() {
@@ -30,8 +46,10 @@ bool synced() {
 
 void setFromClient(long epochSeconds) {
   if (synced()) return;  // NTP (or an earlier client) already won
-  // Plausibility window: after Nov 2023, before year 2100.
-  if (epochSeconds < (long)kSyncThreshold || epochSeconds > 4102444800L) return;
+  // Plausibility window: no earlier than this firmware's build (real time is
+  // always after it), no later than year 2100 — one phone with a wrong clock
+  // must not poison log timestamps.
+  if (epochSeconds < (long)buildEpoch() || epochSeconds > 4102444800L) return;
   timeval tv = {(time_t)epochSeconds, 0};
   settimeofday(&tv, nullptr);
 }

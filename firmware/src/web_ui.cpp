@@ -146,7 +146,7 @@ void sendMainPage() {
       "<p class=err id=msg></p>"
       "<p class=links><a href=/log data-i=log></a>"
 #if REQUIRE_LOGIN
-      " · <a href=/logout data-i=out></a>"
+      " · <a href=# data-i=out onclick='out();return false'></a>"
 #endif
       " · <a href=# data-i=sw onclick='swLang();return false'></a></p>"
       "<p class=muted id=diag></p></div>";
@@ -174,6 +174,12 @@ void sendMainPage() {
       "headers:{'Content-Type':'application/x-www-form-urlencoded'},"
       "body:'t='+Math.floor(Date.now()/1000)})}"
       "}catch(e){}}"
+#if REQUIRE_LOGIN
+      // /logout is POST-only (CSRF), so the link fires a fetch, then reloads
+      // to land on the login page.
+      "async function out(){try{await fetch('/logout',{method:'POST'})}"
+      "catch(e){}location='/'}"
+#endif
       "function msg(x){let e=document.getElementById('msg');"
       "e.textContent=x;if(x)setTimeout(()=>{e.textContent=''},4000)}"
       "async function trig(){let b=document.getElementById('btn');"
@@ -213,8 +219,11 @@ void handleLogin() {
   }
   if (auth::tryPassword(srv->arg("pw"))) {
     String token = auth::createSession();
+    // SameSite=Lax: defense-in-depth on top of the Origin check — the cookie
+    // never rides along on cross-site POSTs in the first place.
     srv->sendHeader("Set-Cookie",
-                    "sess=" + token + "; HttpOnly; Max-Age=31536000; Path=/");
+                    "sess=" + token +
+                        "; HttpOnly; Max-Age=31536000; Path=/; SameSite=Lax");
     srv->sendHeader("Location", "/");
     srv->send(303);
     accesslog::append("prijava", srv->client().remoteIP().toString());
@@ -224,7 +233,14 @@ void handleLogin() {
 }
 
 void handleLogout() {
-  srv->sendHeader("Set-Cookie", "sess=x; Max-Age=0; Path=/");
+  // POST + Origin check: as a bare GET, any page a tenant visits could log
+  // every session out (drive-by <img src=/logout>).
+  if (!originAllowed()) {
+    srv->send(403, "text/plain", "forbidden");
+    return;
+  }
+  srv->sendHeader("Set-Cookie",
+                  "sess=x; Max-Age=0; Path=/; SameSite=Lax");
   srv->sendHeader("Location", "/");
   srv->send(303);
 }
@@ -325,7 +341,7 @@ void begin(WebServer& server) {
     // still accept password guesses (and SHARED_PASSWORD may not be treated
     // as secret then), so don't register them at all.
     server.on("/login", HTTP_POST, handleLogin);
-    server.on("/logout", HTTP_GET, handleLogout);
+    server.on("/logout", HTTP_POST, handleLogout);
   }
   server.on("/toggle", HTTP_POST, handleToggle);
   server.on("/time", HTTP_POST, handleTime);

@@ -8,6 +8,8 @@ namespace gate {
 
 namespace {
 unsigned long lastTriggerMs = 0;
+bool everTriggered = false;  // without this, boot at lastTriggerMs=0 reads
+                             // as "just triggered" and refuses the first press
 
 bool settledOpen = false;          // debounced state reported to the app
 bool lastRaw = false;              // last raw S.C.A. sample
@@ -104,7 +106,10 @@ void tick() {
     movingUntilMs = 0;    // travel finished — stop the backup timer early
     move = kIdle;
   }
-  if (move != kIdle && millis() >= movingUntilMs && !rawUnsettled()) {
+  // Subtraction-style compare: safe across the 49-day millis() rollover,
+  // which a direct "millis() >= movingUntilMs" is not.
+  if (move != kIdle && (long)(millis() - movingUntilMs) >= 0 &&
+      !rawUnsettled()) {
     move = kIdle;  // backup timer expired and S.C.A. is quiet: travel over
     pendingPartial = false;
   }
@@ -115,15 +120,18 @@ bool isOpen() {
 }
 
 long movingRemainMs() {
-  unsigned long now = millis();
-  if (now < movingUntilMs) return (long)(movingUntilMs - now);
+  if (move != kIdle) {  // idle leaves movingUntilMs stale — never compare it
+    long rem = (long)(movingUntilMs - millis());  // rollover-safe subtraction
+    if (rem > 0) return rem;
+  }
   if (rawUnsettled()) return 0;  // moving, deadline unknown (RF remote)
   return -1;
 }
 
 bool trigger() {
   unsigned long now = millis();
-  if (now - lastTriggerMs < TRIGGER_COOLDOWN_MS) return false;
+  if (everTriggered && now - lastTriggerMs < TRIGGER_COOLDOWN_MS) return false;
+  everTriggered = true;
   lastTriggerMs = now;
   if (movingRemainMs() < 0) {
     // Idle: direction follows the settled state.
@@ -148,7 +156,8 @@ bool trigger() {
     // unpredictable: drop the countdown, show plain MOVING, let the settled
     // S.C.A. state decide (half-open reads as OPEN, qualified "partial").
     move = kUnknown;
-    movingUntilMs = 0;
+    movingUntilMs = now;  // already-passed deadline (a 0 sentinel would read
+                          // as far-future once millis() wraps past 2^31)
     pendingPartial = true;
   }
   relayWrite(true);

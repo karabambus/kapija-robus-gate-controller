@@ -10,7 +10,8 @@ namespace {
 String sessions[SESSION_MAX];  // ring buffer of active tokens
 uint8_t nextSlot = 0;
 uint8_t failCount = 0;
-unsigned long lockoutUntilMs = 0;
+bool lockoutActive = false;
+unsigned long lockoutStartMs = 0;
 
 String randomToken() {
   // 128 bits from the hardware RNG, hex-encoded.
@@ -23,7 +24,12 @@ String randomToken() {
 }  // namespace
 
 bool lockedOut() {
-  return millis() < lockoutUntilMs;
+  // Flag + subtraction instead of an absolute deadline: safe across the
+  // 49-day millis() rollover.
+  if (lockoutActive && millis() - lockoutStartMs >= LOGIN_LOCKOUT_MS) {
+    lockoutActive = false;
+  }
+  return lockoutActive;
 }
 
 bool tryPassword(const String& password) {
@@ -33,7 +39,8 @@ bool tryPassword(const String& password) {
     return true;
   }
   if (++failCount >= LOGIN_MAX_FAILS) {
-    lockoutUntilMs = millis() + LOGIN_LOCKOUT_MS;
+    lockoutActive = true;
+    lockoutStartMs = millis();
     failCount = 0;
   }
   return false;
