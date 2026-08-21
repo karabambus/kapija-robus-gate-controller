@@ -10,12 +10,14 @@ platformio.ini            # board/framework config (esp32dev, Arduino, LittleFS)
 include/
 └── config.example.h      # template — copy to config.h (gitignored) and edit
 src/
-├── main.cpp              # boot, WiFi, mDNS, NTP, server wiring, watchdog
+├── main.cpp              # boot sequence, main loop, maintenance reboots
+├── net.*                 # WiFi modes (station/AP/dual), watchdog, identity
 ├── gate_controller.*     # relay pulse + S.C.A. state (all GPIO access)
 ├── auth.*                # shared-password login, RAM sessions, lockout
 ├── access_log.*          # persistent log on LittleFS, rotation
 ├── time_util.*           # NTP + local-time formatting (Europe/Zagreb)
-└── web_ui.*              # HTTP routes + HTML (Croatian UI, English toggle)
+├── web_ui.*              # HTTP routes + HTML (Croatian UI, English toggle)
+└── web_update.*          # /update page: flash new firmware from a browser
 ```
 
 ## Build & flash
@@ -36,7 +38,22 @@ Open `http://kapija.local` (or the printed IP) from a device on the same WiFi.
 ## OTA updates (flash over WiFi)
 
 After the first USB flash, the device accepts firmware over the network —
-no need to open the gate housing:
+no need to open the gate housing.
+
+### Browser upload (easiest)
+
+1. `pio run` to build, which produces `.pio/build/esp32dev/firmware.bin`.
+2. Browse to `http://kapija.local/update` (user `admin`, password =
+   `OTA_PASSWORD` from `config.h`).
+3. Pick the `firmware.bin` and upload. The device flashes it (~15 s),
+   logs an "update" row, and reboots into the new version - check the
+   version on the app's diagnostics line afterwards.
+
+A failed or interrupted upload is harmless: it lands in the inactive flash
+partition and the running firmware keeps going. No firewall rules and no
+password escaping involved - this path avoids every espota pitfall below.
+
+### espota (fallback)
 
 1. In `platformio.ini`, uncomment the three `espota` lines; `--auth` must
    match `OTA_PASSWORD` from `config.h`.
@@ -77,6 +94,14 @@ not resolve on the AP network, the IP always works.
   connected phones drop offline for the duration, and no NTP means log
   entries show "—" instead of a date (the device reboots on a 48 h uptime
   cadence instead of the 4 a.m. schedule).
+- `WIFI_DUAL_MODE` — join the home WiFi AND broadcast the own AP at the same
+  time. The AP is a fallback control path for when the router is down: phones
+  join it and browse to `http://192.168.4.1`. NTP, mDNS and OTA keep working
+  through the router side; when the router is unreachable the device does not
+  reboot - it keeps serving the AP and retries the router every 3 minutes.
+  One radio means one shared channel: the AP follows the router's channel, so
+  a router channel change gives AP clients a few-second blip before they
+  rejoin on their own (set a fixed channel in the router to avoid even that).
 
 - `RELAY_ACTIVE_HIGH` — if the relay clicks ON at boot and releases after,
   flip this to `false`.

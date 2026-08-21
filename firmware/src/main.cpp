@@ -13,7 +13,6 @@
 #include <ESPmDNS.h>
 #include <LittleFS.h>
 #include <WebServer.h>
-#include <WiFi.h>
 
 #include <esp_system.h>
 #include <time.h>
@@ -21,16 +20,14 @@
 #include "access_log.h"
 #include "config_defaults.h"
 #include "gate_controller.h"
+#include "net.h"
 #include "time_util.h"
 #include "version.h"
 #include "web_ui.h"
+#include "web_update.h"
 
 namespace {
 WebServer server(80);
-
-constexpr unsigned long kWifiConnectTimeoutMs = 30000;
-// Reboot if WiFi stays down this long; DHCP/AP hiccups self-heal this way.
-constexpr unsigned long kWifiLostRebootMs = 60000;
 
 // Don't restart under someone's feet: skip while the gate is open or was
 // triggered recently (the check re-fires on later loop passes until safe).
@@ -51,40 +48,6 @@ const char* resetReasonStr() {
   }
 }
 
-#if WIFI_AP_MODE
-void startWifi() {
-  WiFi.mode(WIFI_AP);
-  WiFi.softAPsetHostname(HOSTNAME);
-  WiFi.softAP(AP_SSID, AP_PASS);
-  Serial.print("AP \"" AP_SSID "\" started, IP: ");
-  Serial.println(WiFi.softAPIP());
-}
-#else
-void startWifi() {
-  WiFi.mode(WIFI_STA);
-  WiFi.setHostname(HOSTNAME);
-  WiFi.setSleep(true);  // modem sleep: lower power and self-heating
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-
-  Serial.print("Connecting to WiFi");
-  unsigned long start = millis();
-  while (WiFi.status() != WL_CONNECTED &&
-         millis() - start < kWifiConnectTimeoutMs) {
-    delay(400);
-    Serial.print(".");
-  }
-  Serial.println();
-
-  if (WiFi.status() != WL_CONNECTED) {
-    // No point serving anything without network; retry from scratch.
-    Serial.println("WiFi failed, rebooting in 30 s");
-    delay(30000);
-    ESP.restart();
-  }
-  Serial.print("IP: ");
-  Serial.println(WiFi.localIP());
-}
-#endif
 }  // namespace
 
 void setup() {
@@ -95,7 +58,7 @@ void setup() {
     Serial.println("LittleFS mount failed");
   }
 
-  startWifi();
+  net::begin();
   MDNS.begin(HOSTNAME);  // http://<HOSTNAME>.local
   timeutil::begin();  // always: TZ setup matters even when NTP is unreachable
 
@@ -114,6 +77,7 @@ void setup() {
   ArduinoOTA.begin();
 
   webui::begin(server);
+  webupdate::attach(server);
   server.begin();
   Serial.println("Web server started.");
 }
@@ -139,39 +103,28 @@ void loop() {
     accesslog::append("start", String(FW_VERSION " · ") + resetReasonStr());
   }
 
-#if !WIFI_AP_MODE
-  // WiFi watchdog: reboot after a sustained outage. Station mode only —
-  // WiFi.status() never reads WL_CONNECTED while running as an AP, so this
-  // would reboot-loop a standalone build.
-  static unsigned long lostSinceMs = 0;
-  if (WiFi.status() == WL_CONNECTED) {
-    lostSinceMs = 0;
-  } else {
-    if (lostSinceMs == 0) lostSinceMs = millis();
-    if (millis() - lostSinceMs > kWifiLostRebootMs) ESP.restart();
-  }
+  net::maintain();  // per-mode WiFi watchdog (reboot / quiet retry / nothing)
 
-  // Preventive daily reboot: clears slow heap/WiFi/mDNS degradation.
-  // The 2 h uptime guard keeps it from looping within the reboot hour.
-  if (DAILY_REBOOT_HOUR >= 0 && timeutil::synced() &&
-      millis() > 2 * 3600 * 1000UL) {
-    time_t t = time(nullptr);
-    struct tm tm;
-    localtime_r(&t, &tm);
-    if (tm.tm_hour == DAILY_REBOOT_HOUR && rebootIsSafe()) {
-      Serial.println("Scheduled maintenance reboot");
+  // Preventive maintenance reboot: clears slow heap/WiFi/mDNS degradation.
+  // With a synced clock (NTP, or a browser-donated time) it fires daily at
+  // DAILY_REBOOT_HOUR; the 2 h uptime guard keeps it from looping within the
+  // reboot hour. Unsynced (standalone AP nobody has visited yet), it falls
+  // back to a 48 h uptime cadence — long before the 49-day millis() wrap.
+  if (DAILY_REBOOT_HOUR >= 0) {
+    if (timeutil::synced() && millis() > 2 * 3600 * 1000UL) {
+      time_t t = time(nullptr);
+      struct tm tm;
+      localtime_r(&t, &tm);
+      if (tm.tm_hour == DAILY_REBOOT_HOUR && rebootIsSafe()) {
+        Serial.println("Scheduled maintenance reboot");
+        ESP.restart();
+      }
+    } else if (!timeutil::synced() && millis() > 48 * 3600 * 1000UL &&
+               rebootIsSafe()) {
+      Serial.println("Scheduled maintenance reboot (uptime)");
       ESP.restart();
     }
   }
-#else
-  // Standalone AP: no NTP, so the clock-based reboot above can never fire.
-  // Reboot on uptime instead (also long before the 49-day millis() wrap).
-  if (DAILY_REBOOT_HOUR >= 0 && millis() > 48 * 3600 * 1000UL &&
-      rebootIsSafe()) {
-    Serial.println("Scheduled maintenance reboot (uptime)");
-    ESP.restart();
-  }
-#endif
 
   delay(2);  // yield; keeps the idle task fed
 }

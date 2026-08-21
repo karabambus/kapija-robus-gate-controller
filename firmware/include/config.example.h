@@ -14,6 +14,19 @@
 // connected; no NTP, so log entries show "—" instead of a date) and OTA
 // flashing means joining the AP and uploading to 192.168.4.1.
 #define WIFI_AP_MODE false
+
+// Dual mode: set true (leave WIFI_AP_MODE false) and the ESP32 joins the home
+// network AND broadcasts its own AP (AP_SSID/AP_PASS) at the same time - a
+// fallback control path when the router is down: phones join the AP and open
+// http://192.168.4.1. NTP, mDNS and normal OTA keep working via the router
+// side; if the router is unreachable the device does NOT reboot, it keeps
+// serving the AP and quietly retries the router every 3 minutes.
+// Single-radio caveat: AP and station share one channel, so the AP follows
+// the router's channel. If the router changes channel, AP clients see a
+// few-second blip and rejoin on their own. To rule even that out, set a
+// fixed WiFi channel in the router instead of "auto".
+#define WIFI_DUAL_MODE false
+
 #define AP_SSID "Kapija"
 #define AP_PASS "CHANGE-ME-8+CHARS"  // WPA2 requires at least 8 characters
 

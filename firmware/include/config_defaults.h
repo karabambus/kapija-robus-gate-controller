@@ -19,7 +19,16 @@ static_assert(REQUIRE_LOGIN == true || REQUIRE_LOGIN == false,
 static_assert(WIFI_AP_MODE == true || WIFI_AP_MODE == false,
               "WIFI_AP_MODE must be true or false (unquoted)");
 
-#if WIFI_AP_MODE
+#ifndef WIFI_DUAL_MODE
+#define WIFI_DUAL_MODE false
+#endif
+static_assert(WIFI_DUAL_MODE == true || WIFI_DUAL_MODE == false,
+              "WIFI_DUAL_MODE must be true or false (unquoted)");
+static_assert(!(WIFI_AP_MODE && WIFI_DUAL_MODE),
+              "WIFI_AP_MODE and WIFI_DUAL_MODE are mutually exclusive: "
+              "dual mode already includes the access point");
+
+#if WIFI_AP_MODE || WIFI_DUAL_MODE
 static_assert(sizeof(AP_PASS) >= 9,
               "AP_PASS must be at least 8 characters (WPA2 minimum)");
 #endif

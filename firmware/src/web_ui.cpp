@@ -1,11 +1,10 @@
 #include "web_ui.h"
 
-#include <WiFi.h>
-
 #include "access_log.h"
 #include "auth.h"
 #include "config_defaults.h"
 #include "gate_controller.h"
+#include "net.h"
 #include "time_util.h"
 #include "version.h"
 
@@ -115,13 +114,7 @@ bool authed() {
 // a reverse-proxy/HTTPS front-end is not a supported deployment.
 bool originAllowed() {
   if (!srv->hasHeader("Origin")) return true;
-  const String& origin = srv->header("Origin");
-#if WIFI_AP_MODE
-  String ip = WiFi.softAPIP().toString();
-#else
-  String ip = WiFi.localIP().toString();
-#endif
-  return origin == "http://" + ip || origin == "http://" HOSTNAME ".local";
+  return net::isOwnOrigin(srv->header("Origin"));
 }
 
 void sendLoginPage(bool wrongPassword) {
@@ -276,13 +269,8 @@ void handleStatus() {
   j += ",\"sync\":";
   j += timeutil::synced() ? "true" : "false";
   j += ",\"time\":\"" + timeutil::nowString() + "\"";
-#if WIFI_AP_MODE
-  j += ",\"ip\":\"" + WiFi.softAPIP().toString() + "\"";
-  j += ",\"net\":\"AP · " + String(WiFi.softAPgetStationNum()) + " conn.\"";
-#else
-  j += ",\"ip\":\"" + WiFi.localIP().toString() + "\"";
-  j += ",\"net\":\"signal " + String(WiFi.RSSI()) + " dBm\"";
-#endif
+  j += ",\"ip\":\"" + net::ipString() + "\"";
+  j += ",\"net\":\"" + net::netString() + "\"";
   j += ",\"up\":\"" + String(upMin / 1440) + "d " +
        String((upMin / 60) % 24) + "h " + String(upMin % 60) + "m\"";
   j += ",\"blink\":\"" + gate::blinkStats() + "\"";
